@@ -2,8 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { AppLayout } from '../../layouts/AppLayout';
 import { Send, Sparkles, User, Loader2, ArrowRight, Bot } from 'lucide-react';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
-import { useAuth } from '../../contexts/AuthContext';
 import { Link } from 'react-router-dom';
+import { supabase } from '../../lib/supabase';
 
 interface Message {
   id: string;
@@ -13,7 +13,6 @@ interface Message {
 
 export const Assistant = () => {
   const { activeWorkspace } = useWorkspace();
-  const { user } = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const [input, setInput] = useState('');
@@ -54,80 +53,42 @@ export const Assistant = () => {
     setInput('');
     setIsTyping(true);
 
-    // Simulate AI processing delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    let responseContent: React.ReactNode =
+      "I couldn't find specific data for that query in your workspace.";
 
-    let responseContent: React.ReactNode = "I couldn't find specific data for that query in your workspace.";
-
-    // Mocked Grounded Responses based on PRD
-    const lowerText = text.toLowerCase();
-    if (lowerText.includes('top 3 opportunities') || lowerText.includes('opportunities')) {
-      responseContent = (
-        <div className="space-y-3">
-          <p>Here are the top 3 opportunities based on your current workspace scoring:</p>
-          <div className="space-y-2">
-            <Link to="/app/opportunities/opp-1" className="block p-3 bg-white border border-gray-200 rounded-xl hover:border-astrix-teal transition-colors">
-              <div className="flex justify-between items-center mb-1">
-                <span className="font-bold text-gray-900">SAML SSO Integration Missing</span>
-                <span className="text-astrix-teal font-black">92</span>
-              </div>
-              <div className="text-xs text-gray-500">Affects $2.04M ARR • 84 Signals</div>
-            </Link>
-            <Link to="/app/opportunities/opp-2" className="block p-3 bg-white border border-gray-200 rounded-xl hover:border-astrix-teal transition-colors">
-              <div className="flex justify-between items-center mb-1">
-                <span className="font-bold text-gray-900">API Rate Limits Too Strict</span>
-                <span className="text-astrix-gold font-black">78</span>
-              </div>
-              <div className="text-xs text-gray-500">Affects $840k ARR • 42 Signals</div>
-            </Link>
-            <Link to="/app/opportunities/opp-3" className="block p-3 bg-white border border-gray-200 rounded-xl hover:border-astrix-teal transition-colors">
-              <div className="flex justify-between items-center mb-1">
-                <span className="font-bold text-gray-900">Dark Mode Support</span>
-                <span className="text-gray-500 font-black">41</span>
-              </div>
-              <div className="text-xs text-gray-500">Affects $45k ARR • 312 Signals</div>
-            </Link>
-          </div>
-        </div>
-      );
-    } else if (lowerText.includes('accounts') && lowerText.includes('saml')) {
-      responseContent = (
-        <div className="space-y-3">
-          <p>The <strong>SAML SSO Integration Missing</strong> problem currently affects the following key accounts:</p>
-          <ul className="list-disc pl-5 space-y-1 text-sm text-gray-700">
-            <li><strong>CloudScale Inc</strong> ($1.2M ARR) - Enterprise Tier</li>
-            <li><strong>TechFlow</strong> ($840k ARR) - Enterprise Tier</li>
-          </ul>
-          <p className="text-sm text-gray-500 mt-2">Total ARR at risk: $2.04M</p>
-        </div>
-      );
-    } else if (lowerText.includes('verdict') || lowerText.includes('launch')) {
-      responseContent = (
-        <div className="space-y-3">
-          <p>The last completed launch was <strong>Enterprise SAML SSO</strong>.</p>
-          <div className="p-3 bg-green-50 border border-green-200 rounded-xl">
-            <div className="text-green-800 font-bold mb-1">Verdict: Solved</div>
-            <p className="text-sm text-green-700">Signal volume dropped from 84 to 12. Okta and Azure AD support successfully addressed the primary friction point.</p>
-          </div>
-        </div>
-      );
-    } else if (lowerText.includes('build') || lowerText.includes('decisions')) {
-      responseContent = (
-        <div className="space-y-3">
-          <p>You have 1 recent decision marked as <strong>Build</strong>:</p>
-          <div className="p-3 bg-white border border-gray-200 rounded-xl">
-            <div className="font-bold text-gray-900 mb-1">SAML SSO Integration Missing</div>
-            <p className="text-sm text-gray-600 line-clamp-2">"This is blocking $2M+ in Enterprise renewals. The engineering effort is estimated at 3 sprints..."</p>
-            <Link to="/app/decisions/dec-1" className="text-xs text-brand-blue font-bold mt-2 inline-flex items-center gap-1 hover:underline">
-              View Decision <ArrowRight className="w-3 h-3" />
-            </Link>
-          </div>
-        </div>
-      );
+    if (!activeWorkspace?.id) {
+      responseContent = 'Select a workspace first, then ask your query.';
     } else {
-      responseContent = (
-        <p>I can only answer questions grounded in your workspace data. Try asking about opportunities, accounts, decisions, or launches.</p>
-      );
+      const { data, error } = await supabase.functions.invoke('workspace-query', {
+        body: {
+          workspace_id: activeWorkspace.id,
+          query: text
+        }
+      });
+
+      if (error) {
+        responseContent = `Query failed: ${error.message}`;
+      } else if (data?.error) {
+        responseContent = data.error;
+      } else if (Array.isArray(data?.rows) && data.rows.length > 0) {
+        responseContent = (
+          <div className="space-y-2">
+            {data.rows.slice(0, 5).map((row: Record<string, any>, idx: number) => (
+              <div key={idx} className="p-3 bg-white border border-gray-200 rounded-xl">
+                {Object.entries(row).map(([key, value]) => (
+                  <div key={key} className="text-xs text-gray-700">
+                    <span className="font-bold text-gray-900">{key}:</span> {String(value ?? '-')}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        );
+      } else if (typeof data?.answer === 'string') {
+        responseContent = data.answer;
+      } else {
+        responseContent = 'No matching results found in workspace data.';
+      }
     }
 
     const assistantMsg: Message = { id: Date.now().toString(), role: 'assistant', content: responseContent };

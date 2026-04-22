@@ -68,7 +68,16 @@ export const SignalExplorer = ({ defaultOpenAdd = false }: { defaultOpenAdd?: bo
 
   const handleSaveSignal = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeWorkspace || !newSignal.raw_text) return;
+    const rawText = newSignal.raw_text.trim();
+    if (!activeWorkspace || !rawText) return;
+    if (rawText.length < 10) {
+      addToast('Signal text must be at least 10 characters', 'error');
+      return;
+    }
+    if (rawText.length > 4000) {
+      addToast('Signal text too long (max 4000 chars)', 'error');
+      return;
+    }
     
     setIsSavingSignal(true);
     try {
@@ -76,6 +85,7 @@ export const SignalExplorer = ({ defaultOpenAdd = false }: { defaultOpenAdd?: bo
       await api.signals.create({
         workspace_id: activeWorkspace.id,
         ...newSignal,
+        raw_text: rawText,
         accounts: selectedAccount ? { name: selectedAccount.name, arr: selectedAccount.arr, plan: selectedAccount.plan || 'Standard' } : undefined
       });
       addToast("Signal added successfully", "success");

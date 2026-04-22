@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { MOCK_USER } from '../lib/mockData';
+import { supabase } from '../lib/supabase';
 
 interface AuthContextType {
   session: any;
@@ -31,58 +31,75 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
-    const initAuth = async () => {
+    let isMounted = true;
+
+    const hydrateSession = async () => {
       setIsInitializing(true);
-      // Simulate Supabase async session hydration
-      await new Promise(resolve => setTimeout(resolve, 600));
-      
-      // For the sake of strict backend-readiness, we remove localStorage hacks.
-      // A real Supabase client would call supabase.auth.getSession() here.
-      // We default to logged out to ensure the hydration flow is respected.
-      setUser(null);
-      setSession(null);
+      const { data, error } = await supabase.auth.getSession();
+      if (!isMounted) return;
+      if (!error) {
+        setSession(data.session);
+        setUser(data.session?.user ?? null);
+      }
       setIsInitializing(false);
     };
-    
-    initAuth();
+
+    hydrateSession();
+
+    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      if (!isMounted) return;
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
+      setIsInitializing(false);
+    });
+
+    return () => {
+      isMounted = false;
+      data.subscription.unsubscribe();
+    };
   }, []);
 
-  const simulateDelay = () => new Promise(resolve => setTimeout(resolve, 800));
-
   const signIn = async (email: string, password: string) => {
-    await simulateDelay();
-    setUser(MOCK_USER);
-    setSession({ access_token: 'mock_token' });
-    return { error: null };
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    return { error: error?.message ?? null };
   };
 
   const signUp = async (email: string, password: string, name: string) => {
-    await simulateDelay();
-    setUser({ ...MOCK_USER, email, user_metadata: { full_name: name } });
-    setSession({ access_token: 'mock_token' });
-    return { error: null, needsConfirmation: false };
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { full_name: name }
+      }
+    });
+
+    const needsConfirmation = !data.session;
+    return { error: error?.message ?? null, needsConfirmation };
   };
 
   const signInWithGoogle = async () => {
-    await simulateDelay();
-    setUser(MOCK_USER);
-    setSession({ access_token: 'mock_token' });
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/app`
+      }
+    });
   };
 
   const signOut = async () => {
-    await simulateDelay();
-    setUser(null);
-    setSession(null);
+    await supabase.auth.signOut();
   };
 
   const resetPassword = async (email: string) => {
-    await simulateDelay();
-    return { error: null };
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`
+    });
+    return { error: error?.message ?? null };
   };
 
   const updatePassword = async (password: string) => {
-    await simulateDelay();
-    return { error: null };
+    const { error } = await supabase.auth.updateUser({ password });
+    return { error: error?.message ?? null };
   };
 
   return (

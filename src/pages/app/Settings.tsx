@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { AppLayout } from '../../layouts/AppLayout';
-import { Building2, Users, CreditCard, Loader2, Trash2, Plus, X, Box, Target, ShieldCheck, Eye, Activity } from 'lucide-react';
+import { Building2, Users, CreditCard, Loader2, Trash2, Plus, X, Box, Target, ShieldCheck, Activity } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useTeam, api } from '../../lib/api';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../contexts/AuthContext';
 
 export const Settings = () => {
   const [activeTab, setActiveTab] = useState('workspace');
   const { addToast } = useToast();
   const { activeWorkspace, refreshWorkspaces } = useWorkspace();
+  const { user } = useAuth();
   const [searchParams] = useSearchParams();
 
   // Data States
@@ -19,6 +22,11 @@ export const Settings = () => {
   const [wsName, setWsName] = useState('');
   const [wsTimezone, setWsTimezone] = useState('');
   const [subscription, setSubscription] = useState<any>(null);
+  const [memberRole, setMemberRole] = useState<string>('member');
+  const [productAreas, setProductAreas] = useState<string[]>([]);
+  const [segments, setSegments] = useState<string[]>([]);
+  const [newArea, setNewArea] = useState('');
+  const [newSegment, setNewSegment] = useState('');
 
   // Modals/Forms State
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
@@ -37,34 +45,85 @@ export const Settings = () => {
 
   const fetchSubscription = async () => {
     if (!activeWorkspace) return;
-    // Mocking subscription state for the Free tier
-    setSubscription({ plan_type: 'Free', member_limit: 1, viewer_limit: 2 });
+    const { data } = await supabase
+      .from('subscriptions')
+      .select('plan')
+      .eq('workspace_id', activeWorkspace.id)
+      .maybeSingle();
+
+    const plan = data?.plan || 'Free';
+    setSubscription({
+      plan_type: plan,
+      member_limit: plan === 'Scale' ? 50 : plan === 'Growth' ? 10 : 1,
+      viewer_limit: 0
+    });
   };
 
   useEffect(() => {
     if (activeWorkspace) {
       setWsName(activeWorkspace.name);
       setWsTimezone(activeWorkspace.timezone);
+      setProductAreas(activeWorkspace.product_areas || []);
+      setSegments(activeWorkspace.segments || []);
       fetchSubscription();
     }
   }, [activeWorkspace]);
 
+  useEffect(() => {
+    const fetchRole = async () => {
+      if (!activeWorkspace?.id || !user?.id) return;
+      const { data } = await supabase
+        .from('workspace_members')
+        .select('role')
+        .eq('workspace_id', activeWorkspace.id)
+        .eq('user_id', user.id)
+        .maybeSingle();
+      setMemberRole(data?.role || 'member');
+    };
+    fetchRole();
+  }, [activeWorkspace?.id, user?.id]);
+
+  const canManageSettings = memberRole === 'owner';
+
   const handleUpdateWorkspace = async () => {
     if (!activeWorkspace) return;
+    if (wsName.trim().length < 2) {
+      addToast('Workspace name must be at least 2 characters', 'error');
+      return;
+    }
+    const { error } = await supabase
+      .from('workspaces')
+      .update({ name: wsName.trim(), timezone: wsTimezone })
+      .eq('id', activeWorkspace.id);
+    if (error) {
+      addToast(error.message || 'Failed to update workspace', 'error');
+      return;
+    }
+    await refreshWorkspaces();
     addToast('Workspace updated successfully', 'success');
   };
 
   const handleSendInvite = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeWorkspace || !inviteEmail) return;
+    const normalizedEmail = inviteEmail.trim().toLowerCase();
+    if (!activeWorkspace || !normalizedEmail) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      addToast('Enter a valid email address', 'error');
+      return;
+    }
+
+    if (!['viewer', 'member'].includes(inviteRole)) {
+      addToast('Invalid role selected', 'error');
+      return;
+    }
+
     setIsSendingInvite(true);
     try {
-      // Mock limits check
-      if (inviteRole !== 'viewer' && members.filter(m => m.role !== 'viewer').length >= (subscription?.member_limit || 1)) {
-         throw new Error("Member limit reached for your current plan. Please upgrade to invite more editors.");
+      if (members.length >= (subscription?.member_limit || 1)) {
+         throw new Error("Member limit reached for your current plan. Please upgrade to invite more members.");
       }
       
-      await api.team.invite(activeWorkspace.id, inviteEmail, inviteRole);
+      await api.team.invite(activeWorkspace.id, normalizedEmail, inviteRole);
       addToast("Invitation sent successfully", "success");
       setIsInviteModalOpen(false);
       setInviteEmail('');
@@ -82,8 +141,50 @@ export const Settings = () => {
     refetchTeam();
   };
 
-  const activeEditors = members.filter(m => m.role !== 'viewer').length;
-  const activeViewers = members.filter(m => m.role === 'viewer').length;
+  const saveWorkspaceMetadata = async (nextAreas: string[], nextSegments: string[]) => {
+    if (!activeWorkspace) return;
+    const { error } = await supabase
+      .from('workspaces')
+      .update({ product_areas: nextAreas, segments: nextSegments })
+      .eq('id', activeWorkspace.id);
+    if (error) {
+      addToast(error.message || 'Failed to update workspace metadata', 'error');
+      return;
+    }
+    await refreshWorkspaces();
+  };
+
+  const addArea = async () => {
+    const value = newArea.trim();
+    if (!value || productAreas.includes(value)) return;
+    const nextAreas = [...productAreas, value];
+    setProductAreas(nextAreas);
+    setNewArea('');
+    await saveWorkspaceMetadata(nextAreas, segments);
+  };
+
+  const removeArea = async (area: string) => {
+    const nextAreas = productAreas.filter((item) => item !== area);
+    setProductAreas(nextAreas);
+    await saveWorkspaceMetadata(nextAreas, segments);
+  };
+
+  const addSegment = async () => {
+    const value = newSegment.trim();
+    if (!value || segments.includes(value)) return;
+    const nextSegments = [...segments, value];
+    setSegments(nextSegments);
+    setNewSegment('');
+    await saveWorkspaceMetadata(productAreas, nextSegments);
+  };
+
+  const removeSegment = async (segment: string) => {
+    const nextSegments = segments.filter((item) => item !== segment);
+    setSegments(nextSegments);
+    await saveWorkspaceMetadata(productAreas, nextSegments);
+  };
+
+  const activeEditors = members.length;
 
   return (
     <AppLayout title="Settings">
@@ -126,7 +227,7 @@ export const Settings = () => {
                         <option value="America/Los_Angeles">Pacific Time (PT)</option>
                       </select>
                     </div>
-                    <button onClick={handleUpdateWorkspace} className="bg-astrix-teal text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-sm hover:bg-teal-700 transition-colors">Save Changes</button>
+                    <button disabled={!canManageSettings} onClick={handleUpdateWorkspace} className="bg-astrix-teal text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-sm hover:bg-teal-700 transition-colors disabled:opacity-50">Save Changes</button>
                   </div>
                 </div>
               )}
@@ -135,7 +236,7 @@ export const Settings = () => {
                 <div className="animate-[fadeIn_0.3s_ease-out]">
                   <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
                     <h3 className="font-heading text-xl font-bold text-gray-900">Team Members</h3>
-                    <button onClick={() => setIsInviteModalOpen(true)} className="text-sm font-bold text-white bg-astrix-teal px-4 py-2 rounded-lg hover:bg-teal-700 flex items-center gap-2"><Plus className="w-4 h-4"/> Invite Member</button>
+                    <button disabled={!canManageSettings} onClick={() => setIsInviteModalOpen(true)} className="text-sm font-bold text-white bg-astrix-teal px-4 py-2 rounded-lg hover:bg-teal-700 flex items-center gap-2 disabled:opacity-50"><Plus className="w-4 h-4"/> Invite Member</button>
                   </div>
 
                   {/* Quota display for Free/Starter plans */}
@@ -149,14 +250,8 @@ export const Settings = () => {
                         <div className="bg-astrix-teal h-1.5 rounded-full" style={{ width: `${Math.min(100, (activeEditors / (subscription?.member_limit || 1)) * 100)}%` }}></div>
                       </div>
                     </div>
-                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-1.5"><Eye className="w-4 h-4"/> Viewers (Read-only)</span>
-                        <span className="text-sm font-bold text-gray-900">{activeViewers} / {subscription?.viewer_limit === -1 ? 'Unlimited' : subscription?.viewer_limit || 2}</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-1.5">
-                        <div className="bg-brand-blue h-1.5 rounded-full" style={{ width: subscription?.viewer_limit === -1 ? '10%' : `${Math.min(100, (activeViewers / (subscription?.viewer_limit || 2)) * 100)}%` }}></div>
-                      </div>
+                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 flex items-center justify-center text-sm font-medium text-gray-500">
+                      Workspace roles: Owner and Member
                     </div>
                   </div>
 
@@ -179,7 +274,7 @@ export const Settings = () => {
                               <span className={`text-xs font-mono font-bold uppercase px-2 py-1 rounded ${member.role === 'viewer' ? 'bg-blue-50 text-brand-blue' : 'bg-gray-100 text-gray-600'}`}>
                                 {member.role}
                               </span>
-                              <button onClick={() => removeMember(member.id)} className="text-gray-400 hover:text-red-500"><Trash2 className="w-4 h-4"/></button>
+                              <button disabled={!canManageSettings} onClick={() => removeMember(member.id)} className="text-gray-400 hover:text-red-500 disabled:opacity-50"><Trash2 className="w-4 h-4"/></button>
                             </div>
                           </div>
                         ))}
@@ -196,17 +291,17 @@ export const Settings = () => {
                     <p className="text-sm text-gray-500 mb-6">Categorize signals and problems by product component. This allows for area-specific impact calculation.</p>
                     
                     <div className="flex flex-wrap gap-2 mb-6">
-                      {(activeWorkspace?.product_areas || []).map(area => (
+                      {productAreas.map(area => (
                         <span key={area} className="inline-flex items-center gap-1.5 bg-gray-50 text-gray-700 px-3 py-1.5 rounded-full text-sm font-bold border border-gray-100">
                           {area}
-                          <button className="text-gray-400 hover:text-red-500"><X className="w-3.5 h-3.5" /></button>
+                          <button disabled={!canManageSettings} onClick={() => removeArea(area)} className="text-gray-400 hover:text-red-500 disabled:opacity-50"><X className="w-3.5 h-3.5" /></button>
                         </span>
                       ))}
                     </div>
 
                     <div className="flex gap-2">
-                      <input type="text" placeholder="Add new area..." className="flex-1 bg-gray-50 border border-gray-200 text-sm rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-astrix-teal shadow-inner" />
-                      <button className="bg-gray-900 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-black transition-colors">Add Area</button>
+                      <input disabled={!canManageSettings} type="text" value={newArea} onChange={(e) => setNewArea(e.target.value)} placeholder="Add new area..." className="flex-1 bg-gray-50 border border-gray-200 text-sm rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-astrix-teal shadow-inner disabled:opacity-50" />
+                      <button disabled={!canManageSettings} onClick={addArea} className="bg-gray-900 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-black transition-colors disabled:opacity-50">Add Area</button>
                     </div>
                   </div>
                 </div>
@@ -219,17 +314,17 @@ export const Settings = () => {
                     <p className="text-sm text-gray-500 mb-6">Group your accounts by business value or type (e.g., Enterprise, SMB, Beta). This powers the ARR-at-risk scoring.</p>
                     
                     <div className="flex flex-wrap gap-2 mb-6">
-                      {(activeWorkspace?.segments || []).map(segment => (
+                      {segments.map(segment => (
                         <span key={segment} className="inline-flex items-center gap-1.5 bg-gray-50 text-gray-700 px-3 py-1.5 rounded-full text-sm font-bold border border-gray-100">
                           {segment}
-                          <button className="text-gray-400 hover:text-red-500"><X className="w-3.5 h-3.5" /></button>
+                          <button disabled={!canManageSettings} onClick={() => removeSegment(segment)} className="text-gray-400 hover:text-red-500 disabled:opacity-50"><X className="w-3.5 h-3.5" /></button>
                         </span>
                       ))}
                     </div>
 
                     <div className="flex gap-2">
-                      <input type="text" placeholder="Add new segment..." className="flex-1 bg-gray-50 border border-gray-200 text-sm rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-astrix-teal shadow-inner" />
-                      <button className="bg-gray-900 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-black transition-colors">Add Segment</button>
+                      <input disabled={!canManageSettings} type="text" value={newSegment} onChange={(e) => setNewSegment(e.target.value)} placeholder="Add new segment..." className="flex-1 bg-gray-50 border border-gray-200 text-sm rounded-xl px-4 py-2 outline-none focus:ring-2 focus:ring-astrix-teal shadow-inner disabled:opacity-50" />
+                      <button disabled={!canManageSettings} onClick={addSegment} className="bg-gray-900 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-black transition-colors disabled:opacity-50">Add Segment</button>
                     </div>
                   </div>
                 </div>
@@ -292,9 +387,7 @@ export const Settings = () => {
               <div>
                 <label className="block text-sm font-bold text-gray-900 mb-1">Role</label>
                 <select value={inviteRole} onChange={e => setInviteRole(e.target.value)} className="w-full bg-gray-50 border border-gray-200 text-sm rounded-xl p-3 outline-none focus:ring-2 focus:ring-astrix-teal">
-                  <option value="viewer">Viewer (Read-only, Unlimited on paid plans)</option>
                   <option value="member">Member (Can create decisions & artifacts)</option>
-                  <option value="admin">Admin (Can manage settings and billing)</option>
                 </select>
               </div>
               <div className="flex justify-end gap-2 pt-4 mt-2 border-t border-gray-100">

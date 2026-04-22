@@ -8,6 +8,7 @@ import { Opportunity } from '../../types';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
+import { supabase } from '../../lib/supabase';
 
 export const OpportunitiesList = () => {
   const navigate = useNavigate();
@@ -29,6 +30,7 @@ export const OpportunitiesList = () => {
   const [showArtifactPrompt, setShowArtifactPrompt] = useState(false);
   const [savedDecisionId, setSavedDecisionId] = useState<string | null>(null);
   const [isGeneratingArtifact, setIsGeneratingArtifact] = useState(false);
+  const [savedDecisionTitle, setSavedDecisionTitle] = useState('');
 
   const toggleOpp = (id: string) => {
     if (selectedOpps.includes(id)) {
@@ -54,6 +56,10 @@ export const OpportunitiesList = () => {
 
   const handleSaveDecision = async () => {
     if (!activeWorkspace || !user || !decisionOpp || decisionRationale.length < 20) return;
+    if (decisionRationale.length > 2000) {
+      addToast('Rationale is too long (max 2000 chars)', 'error');
+      return;
+    }
     
     setIsSavingDecision(true);
     try {
@@ -69,6 +75,7 @@ export const OpportunitiesList = () => {
 
       addToast("Decision logged successfully.", "success");
       setSavedDecisionId(newDecision?.id || null);
+      setSavedDecisionTitle(decisionOpp.problems?.title || 'Decision');
       setIsDecisionModalOpen(false);
       setShowArtifactPrompt(true);
       refetch();
@@ -84,14 +91,25 @@ export const OpportunitiesList = () => {
     
     setIsGeneratingArtifact(true);
     try {
-      // Simulate AI generation
-      await new Promise(r => setTimeout(r, 3000));
+      let generatedContent = '';
+      const functionName = type === 'decision_memo' ? 'generate-memo' : 'generate-proof-summary';
+      const { data, error } = await supabase.functions.invoke(functionName, {
+        body: { decision_id: savedDecisionId, workspace_id: activeWorkspace.id }
+      });
+      if (error) throw new Error(error.message || 'Artifact generation failed');
+
+      generatedContent =
+        data?.content ||
+        data?.memo ||
+        data?.summary ||
+        `# ${type === 'decision_memo' ? 'Decision Memo' : 'Execution Artifact'}\n\nDecision: ${savedDecisionTitle}`;
+
       await api.artifacts.create({
         workspace_id: activeWorkspace.id,
         decision_id: savedDecisionId,
-        title: 'Generated PRD',
+        title: type === 'decision_memo' ? 'Decision Memo' : 'Execution Artifact',
         type: type,
-        content: '# Generated Content',
+        content: generatedContent,
         author_id: user.id
       });
 

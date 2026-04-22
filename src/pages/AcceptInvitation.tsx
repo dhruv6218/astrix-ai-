@@ -4,6 +4,7 @@ import { Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
+import { supabase } from '../lib/supabase';
 
 export const AcceptInvitation = () => {
   const [searchParams] = useSearchParams();
@@ -28,27 +29,56 @@ export const AcceptInvitation = () => {
       return;
     }
 
-    // Simulate fetching invite
-    setTimeout(() => {
+    const fetchInvite = async () => {
+      const { data, error } = await supabase
+        .from('workspace_invites')
+        .select('id, workspace_id, email, role, expires_at')
+        .eq('token', token)
+        .single();
+
+      if (error || !data) {
+        setError('Invitation is invalid or expired.');
+        setIsLoading(false);
+        return;
+      }
+
+      const { data: workspace } = await supabase
+        .from('workspaces')
+        .select('name')
+        .eq('id', data.workspace_id)
+        .single();
+
       setInviteDetails({
-        workspace_name: 'Demo Workspace',
-        inviter_name: 'Admin',
-        email: 'demo@astrix.ai',
-        role: 'member'
+        id: data.id,
+        workspace_id: data.workspace_id,
+        workspace_name: workspace?.name || 'Workspace',
+        inviter_name: 'Workspace Owner',
+        email: data.email,
+        role: data.role
       });
       setIsLoading(false);
-    }, 1000);
+    };
+    fetchInvite();
   }, [token]);
 
   const handleAccept = async () => {
-    if (!token) return;
+    if (!token || !inviteDetails || !user) return;
     setIsAccepting(true);
     setError(null);
 
-    setTimeout(async () => {
-      await refreshWorkspaces();
-      navigate('/app');
-    }, 1000);
+    const { error: rpcError } = await supabase.rpc('accept_workspace_invite', {
+      p_token: token
+    });
+
+    if (rpcError) {
+      setError(rpcError.message || 'Failed to accept invitation');
+      setIsAccepting(false);
+      return;
+    }
+
+    await refreshWorkspaces();
+    navigate('/app');
+    setIsAccepting(false);
   };
 
   const handleSignupAndAccept = async (e: React.FormEvent) => {
@@ -72,9 +102,7 @@ export const AcceptInvitation = () => {
       return;
     }
 
-    setTimeout(async () => {
-      await handleAccept();
-    }, 1000);
+    await handleAccept();
   };
 
   if (isLoading) {

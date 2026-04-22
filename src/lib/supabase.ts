@@ -1,34 +1,18 @@
-// Dummy Supabase Client for Frontend-Only Prototype
-// This prevents import errors without needing a real backend connection.
+import { createClient } from '@supabase/supabase-js';
 
-export const supabase = {
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error(
+    'Missing Supabase env vars. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file.'
+  );
+}
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    getSession: async () => ({ data: { session: null } }),
-    onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
-    getUser: async () => ({ data: { user: null } }),
-    signOut: async () => ({ error: null }),
-  },
-  from: () => ({
-    select: () => ({ 
-      eq: () => ({ 
-        order: () => ({ data: [], error: null }), 
-        single: () => ({ data: null, error: null }) 
-      }),
-      order: () => ({ data: [], error: null }),
-      single: () => ({ data: null, error: null })
-    }),
-    insert: () => ({ select: () => ({ single: () => ({ data: null, error: null }) }) }),
-    update: () => ({ eq: () => ({ select: () => ({ single: () => ({ data: null, error: null }) }) }) }),
-    delete: () => ({ eq: () => ({ data: null, error: null }), match: () => ({ error: null }) }),
-    upsert: () => ({ data: null, error: null }),
-  }),
-  rpc: async () => ({ data: null, error: null }),
-  functions: {
-    invoke: async () => ({ data: null, error: null })
-  },
-  storage: {
-    from: () => ({ upload: async () => ({ data: null, error: null }) })
-  },
-  channel: () => ({ on: () => ({ subscribe: () => {} }) }),
-  removeChannel: () => {}
-};
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true
+  }
+});

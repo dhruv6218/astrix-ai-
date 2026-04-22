@@ -5,12 +5,16 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useOpportunity, api } from '../../lib/api';
 import { useToast } from '../../contexts/ToastContext';
 import { AIBadge } from '../../components/ui/AIBadge';
+import { useAuth } from '../../contexts/AuthContext';
+import { useWorkspace } from '../../contexts/WorkspaceContext';
 
 export const OpportunityDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: currentOpportunity, isLoading } = useOpportunity(id);
   const { addToast } = useToast();
+  const { user } = useAuth();
+  const { activeWorkspace } = useWorkspace();
 
   const [activeTab, setActiveTab] = useState('overview');
   const [isDecisionModalOpen, setIsDecisionModalOpen] = useState(false);
@@ -25,13 +29,30 @@ export const OpportunityDetail = () => {
   };
 
   const handleSaveDecision = async () => {
-    if (decisionRationale.length < 20) return;
+    if (decisionRationale.length < 20 || !currentOpportunity || !activeWorkspace || !user) return;
+    if (decisionRationale.length > 2000) {
+      addToast('Rationale is too long (max 2000 chars).', 'error');
+      return;
+    }
     setIsSavingDecision(true);
-    await new Promise(r => setTimeout(r, 800));
-    addToast('Decision committed successfully.', 'success');
-    setIsDecisionModalOpen(false);
-    setIsSavingDecision(false);
-    navigate('/app/decisions');
+    try {
+      await api.decisions.create({
+        workspace_id: activeWorkspace.id,
+        opportunity_id: currentOpportunity.id,
+        problem_id: currentOpportunity.problem_id,
+        title: currentOpportunity.problems?.title || 'Untitled Decision',
+        action: decisionAction,
+        rationale: decisionRationale,
+        author_id: user.id
+      });
+      addToast('Decision committed successfully.', 'success');
+      setIsDecisionModalOpen(false);
+      navigate('/app/decisions');
+    } catch (error: any) {
+      addToast(error.message || 'Failed to commit decision.', 'error');
+    } finally {
+      setIsSavingDecision(false);
+    }
   };
 
   if (isLoading) {

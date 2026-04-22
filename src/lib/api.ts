@@ -1,207 +1,314 @@
 import { useState, useEffect, useCallback } from 'react';
-import * as mocks from './mockData';
 import { Signal, Account, Problem, Opportunity, Decision, Artifact, Launch, TeamMember, WorkspaceInvite } from '../types';
-
-// Simulate network latency
-const delay = (ms = 500) => new Promise(r => setTimeout(r, ms));
-
-// Isolated Mock Database (Replaces global Zustand arrays)
-export const mockDb = {
-  signals: [...mocks.MOCK_SIGNALS] as Signal[],
-  accounts: [...mocks.MOCK_ACCOUNTS] as Account[],
-  problems: [...mocks.MOCK_PROBLEMS] as Problem[],
-  opportunities: [...mocks.MOCK_OPPORTUNITIES] as Opportunity[],
-  decisions: [...mocks.MOCK_DECISIONS] as Decision[],
-  artifacts: [...mocks.MOCK_ARTIFACTS] as Artifact[],
-  launches: [...mocks.MOCK_LAUNCHES] as Launch[],
-  members: [...mocks.MOCK_MEMBERS] as TeamMember[],
-  invites: [] as WorkspaceInvite[]
-};
+import { supabase } from './supabase';
 
 // Global event to trigger refetches across hooks (simulates React Query invalidateQueries)
 export const triggerUpdate = () => window.dispatchEvent(new Event('data-updated'));
 
-// Simulated Supabase API Layer
+const throwOnError = (error: any) => {
+  if (error) throw new Error(error.message || 'Operation failed');
+};
+
+const getWorkspacePlan = async (workspaceId: string) => {
+  const { data } = await supabase
+    .from('subscriptions')
+    .select('plan')
+    .eq('workspace_id', workspaceId)
+    .maybeSingle();
+  return String(data?.plan || 'Free');
+};
+
+const getSignalLimitByPlan = (plan: string) => {
+  if (plan === 'Scale') return 100000;
+  if (plan === 'Growth') return 10000;
+  if (plan === 'Starter') return 2000;
+  return 200;
+};
+
+const getMemberLimitByPlan = (plan: string) => {
+  if (plan === 'Scale') return 50;
+  if (plan === 'Growth') return 10;
+  return 1;
+};
+
+const applySignalFilters = (query: any, opts?: any) => {
+  if (opts?.severityFilter) query = query.eq('severity_label', opts.severityFilter);
+  if (opts?.sentimentFilter) query = query.eq('sentiment_label', opts.sentimentFilter);
+  if (opts?.sourceFilter) query = query.eq('source_type', opts.sourceFilter);
+  if (opts?.globalFilter) query = query.ilike('raw_text', `%${opts.globalFilter}%`);
+  return query;
+};
+
 export const api = {
   signals: {
     list: async (wsId: string, opts?: any) => {
-      await delay(300);
-      let res = mockDb.signals.filter(s => s.workspace_id === wsId);
-      if (opts?.globalFilter) {
-        const q = opts.globalFilter.toLowerCase();
-        res = res.filter(s => s.raw_text.toLowerCase().includes(q) || s.accounts?.name.toLowerCase().includes(q));
-      }
-      if (opts?.sorting?.length > 0) {
-        const sort = opts.sorting[0];
-        res.sort((a: any, b: any) => {
-          if (a[sort.id] < b[sort.id]) return sort.desc ? 1 : -1;
-          if (a[sort.id] > b[sort.id]) return sort.desc ? -1 : 1;
-          return 0;
-        });
-      }
-      const total = res.length;
-      if (opts?.page && opts?.limit) {
-        const start = (opts.page - 1) * opts.limit;
-        res = res.slice(start, start + opts.limit);
-      }
-      return { rows: res, total };
+      const page = opts?.page ?? 1;
+      const limit = opts?.limit ?? 10;
+      const sort = opts?.sorting?.[0];
+      const from = (page - 1) * limit;
+      const to = from + limit - 1;
+
+      let query = supabase
+        .from('signals')
+        .select('*, accounts(name, arr, plan)', { count: 'exact' })
+        .eq('workspace_id', wsId);
+
+      query = applySignalFilters(query, opts);
+      query = sort?.id ? query.order(sort.id, { ascending: !sort.desc }) : query.order('created_at', { ascending: false });
+
+      const { data, count, error } = await query.range(from, to);
+      throwOnError(error);
+
+      return { rows: (data ?? []) as Signal[], total: count ?? 0 };
     },
     create: async (data: Partial<Signal>) => {
-      await delay();
-      const newItem = { ...data, id: `sig-${Date.now()}`, created_at: new Date().toISOString() } as Signal;
-      mockDb.signals = [newItem, ...mockDb.signals];
+      if (data.workspace_id) {
+        const [plan, countRes] = await Promise.all([
+          getWorkspacePlan(data.workspace_id),
+          supabase.from('signals').select('*', { count: 'exact', head: true }).eq('workspace_id', data.workspace_id)
+        ]);
+        const currentCount = countRes.count ?? 0;
+        const limit = getSignalLimitByPlan(plan);
+        if (currentCount >= limit) {
+          throw new Error(`Signal quota reached for ${plan} plan (${limit}). Upgrade your plan to add more signals.`);
+        }
+      }
+      const payload = { ...data };
+      delete (payload as any).accounts;
+      const { data: created, error } = await supabase.from('signals').insert(payload).select('*').single();
+      throwOnError(error);
       triggerUpdate();
-      return newItem;
+      return created as Signal;
     },
     get: async (id: string) => {
-      await delay();
-      const signal = mockDb.signals.find(s => s.id === id);
-      const account = signal?.account_id ? mockDb.accounts.find(a => a.id === signal.account_id) : null;
-      return { ...signal, accounts: account };
+      const { data, error } = await supabase
+        .from('signals')
+        .select('*, accounts(name, arr, plan)')
+        .eq('id', id)
+        .single();
+      throwOnError(error);
+      return data as Signal;
     }
   },
   accounts: {
     list: async (wsId: string, opts?: any) => {
-      await delay(300);
-      let res = mockDb.accounts.filter(a => a.workspace_id === wsId);
-      if (opts?.globalFilter) {
-        const q = opts.globalFilter.toLowerCase();
-        res = res.filter(a => a.name.toLowerCase().includes(q) || (a.domain && a.domain.toLowerCase().includes(q)));
-      }
-      if (opts?.sorting?.length > 0) {
-        const sort = opts.sorting[0];
-        res.sort((a: any, b: any) => {
-          if (a[sort.id] < b[sort.id]) return sort.desc ? 1 : -1;
-          if (a[sort.id] > b[sort.id]) return sort.desc ? -1 : 1;
-          return 0;
-        });
-      }
-      const total = res.length;
-      if (opts?.page && opts?.limit) {
-        const start = (opts.page - 1) * opts.limit;
-        res = res.slice(start, start + opts.limit);
-      }
-      return { rows: res, total };
+      const page = opts?.page ?? 1;
+      const limit = opts?.limit ?? 10;
+      const sort = opts?.sorting?.[0];
+      const from = (page - 1) * limit;
+      const to = from + limit - 1;
+      let query = supabase.from('accounts').select('*', { count: 'exact' }).eq('workspace_id', wsId);
+      if (opts?.globalFilter) query = query.ilike('name', `%${opts.globalFilter}%`);
+      query = sort?.id ? query.order(sort.id, { ascending: !sort.desc }) : query.order('created_at', { ascending: false });
+
+      const { data, count, error } = await query.range(from, to);
+      throwOnError(error);
+      return { rows: (data ?? []) as Account[], total: count ?? 0 };
     },
     create: async (data: Partial<Account>) => {
-      await delay();
-      const newItem = { ...data, id: `acc-${Date.now()}`, created_at: new Date().toISOString(), signal_count: 0 } as Account;
-      mockDb.accounts = [newItem, ...mockDb.accounts];
+      const { data: created, error } = await supabase.from('accounts').insert(data).select('*').single();
+      throwOnError(error);
       triggerUpdate();
-      return newItem;
+      return created as Account;
     },
     get: async (id: string) => {
-      await delay();
-      const account = mockDb.accounts.find(a => a.id === id);
-      const signals = mockDb.signals.filter(s => s.account_id === id);
-      const problems = mockDb.problems.filter(p => signals.some(s => s.normalized_text?.includes(p.title))); // Simple mock relation
+      const [{ data: account, error: accountError }, { data: signals, error: signalsError }, { data: problems, error: problemsError }] = await Promise.all([
+        supabase.from('accounts').select('*').eq('id', id).single(),
+        supabase.from('signals').select('*').eq('account_id', id).order('created_at', { ascending: false }),
+        supabase
+          .from('problems')
+          .select('*, problem_signal_links!inner(signal_id), signals!inner(account_id)')
+          .eq('signals.account_id', id)
+      ]);
+      throwOnError(accountError);
+      throwOnError(signalsError);
+      if (problemsError && !String(problemsError.message || '').includes('signals')) throwOnError(problemsError);
       return { account, signals, problems };
     }
   },
   problems: {
     list: async (wsId: string) => {
-      await delay();
-      return mockDb.problems.filter(p => p.workspace_id === wsId);
+      const { data, error } = await supabase.from('problems').select('*').eq('workspace_id', wsId).order('created_at', { ascending: false });
+      throwOnError(error);
+      return (data ?? []) as Problem[];
     },
     get: async (id: string) => {
-      await delay();
-      const problem = mockDb.problems.find(p => p.id === id);
-      const signals = mockDb.signals.slice(0, 3); // Mock relation
-      const accounts = mockDb.accounts.slice(0, 2); // Mock relation
+      const { data: problem, error: problemError } = await supabase.from('problems').select('*').eq('id', id).single();
+      throwOnError(problemError);
+
+      const { data: links, error: linksError } = await supabase.from('problem_signal_links').select('signal_id').eq('problem_id', id);
+      throwOnError(linksError);
+      const signalIds = (links ?? []).map((l: any) => l.signal_id);
+
+      let signals: Signal[] = [];
+      if (signalIds.length) {
+        const { data, error } = await supabase.from('signals').select('*, accounts(name, arr, plan)').in('id', signalIds).order('created_at', { ascending: false });
+        throwOnError(error);
+        signals = (data ?? []) as Signal[];
+      }
+
+      const accountIds = [...new Set(signals.map((s) => s.account_id).filter(Boolean))] as string[];
+      let accounts: Account[] = [];
+      if (accountIds.length) {
+        const { data, error } = await supabase.from('accounts').select('*').in('id', accountIds);
+        throwOnError(error);
+        accounts = (data ?? []) as Account[];
+      }
       return { problem, signals, accounts };
     },
     create: async (data: Partial<Problem>) => {
-      await delay();
-      const newItem = { ...data, id: `prob-${Date.now()}`, created_at: new Date().toISOString(), evidence_count: 0, affected_arr: 0, status: 'Active', trend: 'Stable' } as Problem;
-      mockDb.problems = [newItem, ...mockDb.problems];
+      const { data: created, error } = await supabase.from('problems').insert(data).select('*').single();
+      throwOnError(error);
       triggerUpdate();
-      return newItem;
+      return created as Problem;
     }
   },
   opportunities: {
     list: async (wsId: string) => {
-      await delay();
-      return mockDb.opportunities.filter(o => o.workspace_id === wsId);
+      const { data, error } = await supabase
+        .from('opportunities')
+        .select('*, problems(id, title, evidence_count, affected_arr)')
+        .eq('workspace_id', wsId)
+        .order('opportunity_score', { ascending: false });
+      throwOnError(error);
+      return (data ?? []) as Opportunity[];
     },
     get: async (id: string) => {
-      await delay();
-      return mockDb.opportunities.find(o => o.id === id);
+      const { data, error } = await supabase
+        .from('opportunities')
+        .select('*, problems(id, title, evidence_count, affected_arr)')
+        .eq('id', id)
+        .single();
+      throwOnError(error);
+      return data as Opportunity;
     }
   },
   decisions: {
     list: async (wsId: string) => {
-      await delay();
-      return mockDb.decisions.filter(d => d.workspace_id === wsId);
+      const { data, error } = await supabase
+        .from('decisions')
+        .select('*, users:profiles!decisions_author_id_fkey(full_name)')
+        .eq('workspace_id', wsId)
+        .order('created_at', { ascending: false });
+      throwOnError(error);
+      return (data ?? []) as Decision[];
     },
     get: async (id: string) => {
-      await delay();
-      return mockDb.decisions.find(d => d.id === id);
+      const { data, error } = await supabase
+        .from('decisions')
+        .select('*, users:profiles!decisions_author_id_fkey(full_name)')
+        .eq('id', id)
+        .single();
+      throwOnError(error);
+      return data as Decision;
     },
     create: async (data: Partial<Decision>) => {
-      await delay();
-      const newItem = { ...data, id: `dec-${Date.now()}`, created_at: new Date().toISOString(), users: { full_name: 'Demo User' } } as Decision;
-      mockDb.decisions = [newItem, ...mockDb.decisions];
+      const { data: created, error } = await supabase.from('decisions').insert(data).select('*').single();
+      throwOnError(error);
       triggerUpdate();
-      return newItem;
+      return created as Decision;
     }
   },
   artifacts: {
     list: async (wsId: string) => {
-      await delay();
-      return mockDb.artifacts.filter(a => a.workspace_id === wsId);
+      const { data, error } = await supabase
+        .from('artifacts')
+        .select(`
+          *,
+          decisions(title),
+          users:profiles!artifacts_author_id_fkey(full_name)
+        `)
+        .eq('workspace_id', wsId)
+        .order('updated_at', { ascending: false });
+      throwOnError(error);
+      return (data ?? []) as Artifact[];
     },
     create: async (data: Partial<Artifact>) => {
-      await delay();
-      const newItem = { ...data, id: `art-${Date.now()}`, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), users: { full_name: 'Demo User' } } as Artifact;
-      mockDb.artifacts = [newItem, ...mockDb.artifacts];
+      const { data: created, error } = await supabase.from('artifacts').insert(data).select('*').single();
+      throwOnError(error);
       triggerUpdate();
-      return newItem;
+      return created as Artifact;
     },
     update: async (id: string, data: Partial<Artifact>) => {
-      await delay();
-      mockDb.artifacts = mockDb.artifacts.map(a => a.id === id ? { ...a, ...data, updated_at: new Date().toISOString() } : a);
+      const { error } = await supabase.from('artifacts').update(data).eq('id', id);
+      throwOnError(error);
       triggerUpdate();
     },
     get: async (id: string) => {
-      await delay();
-      return mockDb.artifacts.find(a => a.id === id);
+      const { data, error } = await supabase
+        .from('artifacts')
+        .select(`
+          *,
+          decisions(title),
+          users:profiles!artifacts_author_id_fkey(full_name)
+        `)
+        .eq('id', id)
+        .single();
+      throwOnError(error);
+      return data as Artifact;
     }
   },
   launches: {
     list: async (wsId: string) => {
-      await delay();
-      return mockDb.launches.filter(l => l.workspace_id === wsId);
+      const { data, error } = await supabase.from('launches').select('*').eq('workspace_id', wsId).order('launched_at', { ascending: false });
+      throwOnError(error);
+      return (data ?? []) as Launch[];
     },
     create: async (data: Partial<Launch>) => {
-      await delay();
-      const newItem = { ...data, id: `launch-${Date.now()}`, created_at: new Date().toISOString(), status: 'active' } as Launch;
-      mockDb.launches = [newItem, ...mockDb.launches];
+      const payload = { status: 'active', ...data };
+      const { data: created, error } = await supabase.from('launches').insert(payload).select('*').single();
+      throwOnError(error);
       triggerUpdate();
-      return newItem;
+      return created as Launch;
     },
     update: async (id: string, data: Partial<Launch>) => {
-      await delay();
-      mockDb.launches = mockDb.launches.map(l => l.id === id ? { ...l, ...data } : l);
+      const { error } = await supabase.from('launches').update(data).eq('id', id);
+      throwOnError(error);
       triggerUpdate();
     }
   },
   team: {
     list: async (wsId: string) => {
-      await delay();
+      const [{ data: members, error: membersError }, { data: invites, error: invitesError }] = await Promise.all([
+        supabase
+          .from('workspace_members')
+          .select('*, users:profiles!workspace_members_user_id_fkey(full_name, email, avatar_url)')
+          .eq('workspace_id', wsId),
+        supabase.from('workspace_invites').select('*').eq('workspace_id', wsId)
+      ]);
+      throwOnError(membersError);
+      throwOnError(invitesError);
       return {
-         members: mockDb.members.filter(m => m.workspace_id === wsId),
-         invites: mockDb.invites.filter(i => i.workspace_id === wsId)
+        members: (members ?? []) as TeamMember[],
+        invites: (invites ?? []) as WorkspaceInvite[]
       };
     },
     invite: async (wsId: string, email: string, role: string) => {
-      await delay();
-      const newInv = { id: `inv-${Date.now()}`, workspace_id: wsId, email, role, token: `tok-${Date.now()}`, created_at: new Date().toISOString(), expires_at: new Date(Date.now() + 86400000).toISOString() };
-      mockDb.invites = [...mockDb.invites, newInv];
+      const normalizedRole = role === 'viewer' ? 'member' : role;
+      if (!['member', 'owner'].includes(normalizedRole)) {
+        throw new Error('Invalid role selected');
+      }
+
+      const [plan, membersRes] = await Promise.all([
+        getWorkspacePlan(wsId),
+        supabase.from('workspace_members').select('*', { count: 'exact', head: true }).eq('workspace_id', wsId)
+      ]);
+      const currentMembers = membersRes.count ?? 0;
+      const memberLimit = getMemberLimitByPlan(plan);
+      if (currentMembers >= memberLimit && normalizedRole !== 'owner') {
+        throw new Error(`Member limit reached for ${plan} plan (${memberLimit}).`);
+      }
+
+      const { data, error } = await supabase.functions.invoke('invite-member', {
+        body: { workspace_id: wsId, email, role: normalizedRole }
+      });
+      if (error) throw new Error(error.message || 'Failed to invite member');
+      if (data?.error) throw new Error(data.error);
       triggerUpdate();
     },
     removeMember: async (id: string) => {
-      await delay();
-      mockDb.members = mockDb.members.filter(m => m.id !== id);
+      const { error } = await supabase.from('workspace_members').delete().eq('id', id);
+      throwOnError(error);
       triggerUpdate();
     }
   }
@@ -212,12 +319,18 @@ export const api = {
 export function useQuery<T>(fetcher: () => Promise<T>, deps: any[]) {
   const [data, setData] = useState<T | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const execute = useCallback(async () => {
     setIsLoading(true);
+    setError(null);
     try {
       const res = await fetcher();
       setData(res);
+    } catch (err: any) {
+      const msg = err?.message || 'Failed to fetch data';
+      setError(msg);
+      console.error(msg, err);
     } finally {
       setIsLoading(false);
     }
@@ -229,7 +342,7 @@ export function useQuery<T>(fetcher: () => Promise<T>, deps: any[]) {
     return () => window.removeEventListener('data-updated', execute);
   }, [execute]);
 
-  return { data, isLoading, refetch: execute };
+  return { data, isLoading, error, refetch: execute };
 }
 
 export const useSignals = (wsId?: string, opts?: any) => {

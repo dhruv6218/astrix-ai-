@@ -8,6 +8,7 @@ import { AIBadge } from '../../components/ui/AIBadge';
 import { useToast } from '../../contexts/ToastContext';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
 
 export const DecisionDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -37,13 +38,24 @@ export const DecisionDetail = () => {
     if (!activeWorkspace || !id || !user) return;
     setIsGenerating(true);
     try {
-      await new Promise(r => setTimeout(r, 3000)); // Simulate AI
+      const fn = type === 'decision_memo' ? 'generate-memo' : 'generate-proof-summary';
+      const { data, error } = await supabase.functions.invoke(fn, {
+        body: { decision_id: id, workspace_id: activeWorkspace.id }
+      });
+      if (error) throw new Error(error.message || 'Failed to generate artifact');
+
+      const content =
+        data?.content ||
+        data?.memo ||
+        data?.summary ||
+        `# ${type === 'prd' ? 'Execution Artifact' : 'Decision Memo'}\n\nDecision ID: ${id}`;
+
       await api.artifacts.create({
         workspace_id: activeWorkspace.id,
         decision_id: id,
-        title: type === 'prd' ? 'Generated PRD' : 'Decision Memo',
+        title: type === 'prd' ? 'Execution Artifact' : 'Decision Memo',
         type: type,
-        content: '# Generated Content\n\nAI generated this based on the decision.',
+        content,
         author_id: user.id
       });
       

@@ -5,6 +5,7 @@ import { AlertCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
 import { Skeleton } from '../../components/ui/Skeleton';
+import { supabase } from '../../lib/supabase';
 
 export const Step1Workspace = () => {
   const navigate = useNavigate();
@@ -23,11 +24,26 @@ export const Step1Workspace = () => {
     setIsLoading(true);
     setError(null);
 
-    // Simulate Workspace Creation
-    setTimeout(async () => {
-      await refreshWorkspaces();
-      navigate('/onboarding/step-2');
-    }, 1000);
+    const slug = name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+
+    const { error: createError } = await supabase.rpc('create_workspace_with_owner', {
+      p_name: name,
+      p_slug: slug
+    });
+
+    if (createError) {
+      setError(createError.message || 'Failed to create workspace');
+      setIsLoading(false);
+      return;
+    }
+
+    await refreshWorkspaces();
+    navigate('/onboarding/step-2');
+    setIsLoading(false);
   };
 
   return (

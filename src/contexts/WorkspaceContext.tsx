@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
-import { MOCK_WORKSPACE } from '../lib/mockData';
 import { Workspace } from '../types';
+import { supabase } from '../lib/supabase';
 
 interface WorkspaceContextType {
   activeWorkspace: Workspace | null;
@@ -26,6 +26,8 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [isWorkspaceInitializing, setIsWorkspaceInitializing] = useState(true);
 
   const fetchWorkspaces = async () => {
+    setIsWorkspaceInitializing(true);
+
     if (!user) {
       setWorkspaces([]);
       setActiveWorkspace(null);
@@ -33,18 +35,42 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       return;
     }
 
-    setIsWorkspaceInitializing(true);
-    
-    // Simulate Supabase async fetch
-    await new Promise(resolve => setTimeout(resolve, 600));
-    
-    const fetchedWorkspaces = [{
-      ...MOCK_WORKSPACE,
-      product_areas: ['Authentication', 'Core UI', 'API', 'Billing'],
-      segments: ['Enterprise', 'SMB', 'Growth']
-    }];
+    const { data, error } = await supabase
+      .from('workspace_members')
+      .select(`
+        workspace_id,
+        workspaces (
+          id,
+          name,
+          slug,
+          timezone,
+          logo_url,
+          created_at,
+          product_areas,
+          segments
+        )
+      `)
+      .eq('user_id', user.id);
+
+    if (error) {
+      console.error('Failed to fetch workspaces:', error.message);
+      setWorkspaces([]);
+      setActiveWorkspace(null);
+      setIsWorkspaceInitializing(false);
+      return;
+    }
+
+    const fetchedWorkspaces = (data ?? [])
+      .map((row: any) => row.workspaces)
+      .filter(Boolean) as Workspace[];
+
     setWorkspaces(fetchedWorkspaces);
-    setActiveWorkspace(fetchedWorkspaces[0]);
+
+    setActiveWorkspace((prev) => {
+      if (!fetchedWorkspaces.length) return null;
+      const matched = prev ? fetchedWorkspaces.find((w) => w.id === prev.id) : null;
+      return matched ?? fetchedWorkspaces[0];
+    });
 
     setIsWorkspaceInitializing(false);
   };

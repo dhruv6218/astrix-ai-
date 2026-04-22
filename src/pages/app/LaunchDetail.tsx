@@ -5,6 +5,7 @@ import { Rocket, CheckCircle2, Clock, ArrowLeft, Save, Loader2, Sparkles, Trendi
 import { useToast } from '../../contexts/ToastContext';
 import { useLaunches, api } from '../../lib/api';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
+import { supabase } from '../../lib/supabase';
 
 export const LaunchDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -22,6 +23,7 @@ export const LaunchDetail = () => {
   });
   const [isSaving, setIsSaving] = useState(false);
   const [isAdvancedReviewing, setIsAdvancedReviewing] = useState(false);
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
 
   const launch = launches.find(l => l.id === id);
 
@@ -56,10 +58,21 @@ export const LaunchDetail = () => {
     }
   };
 
-  const handleAdvancedReview = () => {
-    // Mocking the Growth/Scale plan restriction
-    addToast("Advanced Launch Reviews require the Growth or Scale plan.", "warning");
-    navigate('/pricing');
+  const handleAdvancedReview = async () => {
+    if (!launch || !activeWorkspace) return;
+    setIsAdvancedReviewing(true);
+    const { data, error } = await supabase.functions.invoke('generate-proof-summary', {
+      body: { workspace_id: activeWorkspace.id, decision_id: launch.decision_id, launch_id: launch.id }
+    });
+    if (error) {
+      addToast(error.message || 'Advanced review failed', 'error');
+      setIsAdvancedReviewing(false);
+      return;
+    }
+    const summary = data?.summary || data?.content || 'AI review completed.';
+    setAiSummary(summary);
+    addToast('Advanced review generated', 'success');
+    setIsAdvancedReviewing(false);
   };
 
   if (!launch) {
@@ -168,9 +181,10 @@ export const LaunchDetail = () => {
               </h3>
               <button 
                 onClick={handleAdvancedReview}
-                className="hidden sm:flex items-center gap-1.5 bg-gradient-to-r from-astrix-teal to-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm hover:shadow-md transition-all group"
+                disabled={isAdvancedReviewing}
+                className="hidden sm:flex items-center gap-1.5 bg-gradient-to-r from-astrix-teal to-blue-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm hover:shadow-md transition-all group disabled:opacity-50"
               >
-                <Sparkles className="w-3.5 h-3.5" /> Run Advanced AI Review <Lock className="w-3 h-3 opacity-70 ml-1" />
+                {isAdvancedReviewing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />} Run Advanced AI Review
               </button>
             </div>
             
@@ -226,6 +240,14 @@ export const LaunchDetail = () => {
                   className="w-full bg-white border border-gray-200 rounded-xl p-4 text-sm font-medium outline-none focus:ring-4 focus:ring-astrix-teal/20 transition-all resize-none min-h-[120px]" 
                 />
               </div>
+              {aiSummary && (
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2.5">AI Proof Summary</label>
+                  <div className="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm font-medium text-gray-700 whitespace-pre-wrap">
+                    {aiSummary}
+                  </div>
+                </div>
+              )}
 
               <div className="flex justify-end pt-4">
                 <button 

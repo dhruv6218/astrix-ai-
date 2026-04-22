@@ -24,6 +24,7 @@ import {
   useLaunches 
 } from '../../lib/api';
 import { Skeleton } from '../../components/ui/Skeleton';
+import { supabase } from '../../lib/supabase';
 
 export const Dashboard = () => {
   const { activeWorkspace } = useWorkspace();
@@ -34,6 +35,30 @@ export const Dashboard = () => {
   const { data: sigData } = useSignals(wsId);
   const { data: decData } = useDecisions(wsId);
   const { data: launchData } = useLaunches(wsId);
+  const [planLabel, setPlanLabel] = React.useState('Free');
+  const [signalLimit, setSignalLimit] = React.useState(200);
+
+  React.useEffect(() => {
+    const fetchPlan = async () => {
+      if (!wsId) return;
+      const { data } = await supabase
+        .from('subscriptions')
+        .select('plan')
+        .eq('workspace_id', wsId)
+        .maybeSingle();
+
+      const plan = data?.plan || 'Free';
+      const normalized = String(plan);
+      setPlanLabel(normalized);
+      setSignalLimit(
+        normalized === 'Scale' ? 100000 :
+        normalized === 'Growth' ? 10000 :
+        normalized === 'Starter' ? 2000 : 200
+      );
+    };
+
+    fetchPlan();
+  }, [wsId]);
 
   const firstName = user?.user_metadata?.full_name?.split(' ')[0] || 'there';
 
@@ -58,7 +83,8 @@ export const Dashboard = () => {
     return `$${value}`;
   };
 
-  const unmatchedSignals = Math.max(0, Math.floor(signalsCount * 0.15));
+  const matchedSignals = opportunities.reduce((sum, opp) => sum + (opp.problems?.evidence_count || 0), 0);
+  const unmatchedSignals = Math.max(0, signalsCount - matchedSignals);
 
   // Dynamic Decision Alpha Calculation
   const solvedLaunches = launches.filter(l => l.pm_verdict === 'Solved').length;
@@ -253,12 +279,12 @@ export const Dashboard = () => {
             </div>
             <div className="flex items-end gap-3 mb-2">
               <div className="text-3xl font-heading font-black text-gray-900">{signalsCount}</div>
-              <div className="text-sm font-medium text-gray-500 mb-1.5">/ 200 used</div>
+              <div className="text-sm font-medium text-gray-500 mb-1.5">/ {signalLimit} used</div>
             </div>
             <div className="w-full bg-gray-100 rounded-full h-1.5 mt-2">
-              <div className="bg-brand-blue h-1.5 rounded-full" style={{ width: `${Math.min(100, (signalsCount / 200) * 100)}%` }}></div>
+              <div className="bg-brand-blue h-1.5 rounded-full" style={{ width: `${Math.min(100, (signalsCount / signalLimit) * 100)}%` }}></div>
             </div>
-            <div className="text-[10px] font-bold text-brand-blue uppercase tracking-widest mt-3">Free Plan</div>
+            <div className="text-[10px] font-bold text-brand-blue uppercase tracking-widest mt-3">{planLabel} Plan</div>
           </div>
         </div>
 

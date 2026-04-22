@@ -5,15 +5,19 @@ import {
   Clock, Plus, FileCode2, FilePen, Send, Loader2
 } from 'lucide-react';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
-import { useArtifacts, api } from '../../lib/api';
+import { useArtifacts, useDecisions, api } from '../../lib/api';
 import { Artifact } from '../../types';
 import { useToast } from '../../contexts/ToastContext';
 import { AIBadge } from '../../components/ui/AIBadge';
 import { Skeleton } from '../../components/ui/Skeleton';
+import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
 
 export const ArtifactStudio = () => {
   const { activeWorkspace } = useWorkspace();
+  const { user } = useAuth();
   const { data: artifacts, isLoading } = useArtifacts(activeWorkspace?.id);
+  const { data: decisions } = useDecisions(activeWorkspace?.id);
   const { addToast } = useToast();
 
   const [selectedArtifact, setSelectedArtifact] = useState<Artifact | null>(null);
@@ -72,31 +76,39 @@ export const ArtifactStudio = () => {
   };
 
   const handleGenerateMock = async () => {
-    setIsGenerating(true);
-    
-    // Simulate realistic LLM generation latency
-    setLoadingStage('Analyzing evidence and decisions...');
-    await new Promise(r => setTimeout(r, 2000));
-    setLoadingStage('Drafting document structure...');
-    await new Promise(r => setTimeout(r, 2000));
-    setLoadingStage('Finalizing markdown output...');
-    await new Promise(r => setTimeout(r, 2000));
+    const targetDecision = decisions[0];
+    if (!activeWorkspace?.id || !user?.id || !targetDecision?.id) {
+      addToast('Create a decision first, then generate artifact.', 'warning');
+      return;
+    }
 
-    const newArt = await api.artifacts.create({
-      workspace_id: activeWorkspace?.id,
-      decision_id: 'mock-dec',
-      title: 'New Feature PRD',
-      type: 'prd',
-      content: '# New Feature PRD\n\n## 1. Problem Statement\nEnterprise accounts are churning due to lack of SAML SSO. IT departments are mandating Okta/Azure AD compliance.\n\n## 2. Scope\n- Implement SAML 2.0 protocol\n- Support Okta and Azure AD identity providers\n- Just-in-Time (JIT) user provisioning\n\n## 3. Success Metrics\n- 0 churns citing security compliance next quarter.\n- 100% of Enterprise tier accounts migrated to SSO within 60 days of launch.',
-      author_id: 'user-1'
-    });
-    
-    setSelectedArtifact(newArt);
-    setIsGenerating(false);
-    setLoadingStage('');
-    setIsTyping(true);
-    setDisplayedContent('');
-    addToast('Artifact generated successfully', 'success');
+    setIsGenerating(true);
+    setLoadingStage('Generating artifact from decision evidence...');
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-memo', {
+        body: { decision_id: targetDecision.id, workspace_id: activeWorkspace.id }
+      });
+      if (error) throw new Error(error.message || 'Failed to generate artifact');
+
+      const content = data?.content || data?.memo || '# Decision Memo';
+      const newArt = await api.artifacts.create({
+        workspace_id: activeWorkspace.id,
+        decision_id: targetDecision.id,
+        title: 'Decision Memo',
+        type: 'decision_memo',
+        content,
+        author_id: user.id
+      });
+      setSelectedArtifact(newArt);
+      setIsTyping(true);
+      setDisplayedContent('');
+      addToast('Artifact generated successfully', 'success');
+    } catch (e: any) {
+      addToast(e.message || 'Artifact generation failed', 'error');
+    } finally {
+      setIsGenerating(false);
+      setLoadingStage('');
+    }
   };
 
   const formatDate = (iso: string) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });

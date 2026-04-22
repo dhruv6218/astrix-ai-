@@ -37,24 +37,40 @@ export const ProblemsList = () => {
     if (!activeWorkspace) return;
     setIsClustering(true);
     setClusterResult(null);
-
-    // Simulate AI Clustering Delay
-    setTimeout(() => {
-      setIsClustering(false);
+    try {
+      await Promise.all([refetch(), api.opportunities.list(activeWorkspace.id)]);
       setClusterResult({ success: true });
-      addToast("Signals clustered and scored successfully via AI", "success");
-    }, 2000);
+      addToast('Problem and opportunity views refreshed from live data.', 'success');
+    } catch (error: any) {
+      addToast(error.message || 'Failed to refresh clustering state', 'error');
+    } finally {
+      setIsClustering(false);
+    }
   };
 
   const handleCreateProblem = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeWorkspace || !newProblem.title) return;
+    const title = newProblem.title.trim();
+    const description = newProblem.description.trim();
+    const productArea = newProblem.product_area.trim();
+    if (!activeWorkspace || !title) return;
+    if (title.length < 5) {
+      addToast('Problem title must be at least 5 characters', 'error');
+      return;
+    }
+    if (description.length > 2000) {
+      addToast('Description too long (max 2000 chars)', 'error');
+      return;
+    }
 
     setIsSavingProblem(true);
     try {
       await api.problems.create({
         workspace_id: activeWorkspace.id,
-        ...newProblem
+        title,
+        description: description || null,
+        severity: newProblem.severity,
+        product_area: productArea || null
       });
       addToast("Problem created successfully", "success");
       setIsCreateModalOpen(false);

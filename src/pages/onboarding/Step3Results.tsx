@@ -2,16 +2,26 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { OnboardingLayout } from '../../layouts/OnboardingLayout';
 import { Database, UploadCloud, Rocket, CheckCircle2, Loader2, ArrowRight } from 'lucide-react';
+import { useWorkspace } from '../../contexts/WorkspaceContext';
+import { useToast } from '../../contexts/ToastContext';
 
 export const Step3Results = () => {
   const navigate = useNavigate();
+  const { activeWorkspace, refreshWorkspaces } = useWorkspace();
+  const { addToast } = useToast();
   const [isInitializing, setIsInitializing] = useState(false);
   const [activeStrategy, setActiveStrategy] = useState<'sample' | 'import' | null>(null);
 
   const handleFinish = async () => {
+    if (!activeWorkspace || !activeStrategy) return;
     setIsInitializing(true);
-    // Simulate space initialization
-    await new Promise(r => setTimeout(r, 2000));
+    await refreshWorkspaces();
+    addToast(
+      activeStrategy === 'import'
+        ? 'Onboarding complete. Use Import Data to upload CSV files.'
+        : 'Onboarding complete. You can start exploring your workspace.',
+      'success'
+    );
     navigate('/app');
   };
 

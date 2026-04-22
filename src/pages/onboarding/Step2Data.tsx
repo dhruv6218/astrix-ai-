@@ -3,10 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { OnboardingLayout } from '../../layouts/OnboardingLayout';
 import { Plus, X, Box, Users, ArrowRight } from 'lucide-react';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
+import { supabase } from '../../lib/supabase';
+import { useToast } from '../../contexts/ToastContext';
 
 export const Step2Data = () => {
   const navigate = useNavigate();
-  const { activeWorkspace } = useWorkspace();
+  const { activeWorkspace, refreshWorkspaces } = useWorkspace();
+  const { addToast } = useToast();
   
   const [productAreas, setProductAreas] = useState<string[]>(['Authentication', 'Dashboard', 'API']);
   const [newArea, setNewArea] = useState('');
@@ -36,8 +39,28 @@ export const Step2Data = () => {
     setSegments(segments.filter(s => s !== segment));
   };
 
-  const handleContinue = () => {
-    // In a real app, we would save these to the database here
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleContinue = async () => {
+    if (!activeWorkspace) return;
+    setIsSaving(true);
+    const { error } = await supabase
+      .from('workspaces')
+      .update({
+        product_areas: productAreas,
+        segments
+      })
+      .eq('id', activeWorkspace.id);
+
+    if (error) {
+      addToast(error.message || 'Failed to save workspace context', 'error');
+      setIsSaving(false);
+      return;
+    }
+
+    await refreshWorkspaces();
+    addToast('Workspace context saved', 'success');
+    setIsSaving(false);
     navigate('/onboarding/step-3');
   };
 
@@ -126,7 +149,7 @@ export const Step2Data = () => {
 
       <button 
         onClick={handleContinue}
-        disabled={productAreas.length === 0 || segments.length === 0}
+        disabled={productAreas.length === 0 || segments.length === 0 || isSaving}
         className="w-full flex items-center justify-center gap-2 text-white bg-brand-blue hover:bg-blue-700 disabled:bg-brand-blue/50 focus-visible:ring-4 focus-visible:ring-brand-blue focus-visible:ring-offset-2 font-bold rounded-xl text-base px-5 py-4 transition-all duration-300 shadow-glow-blue btn-shine outline-none h-[56px]"
       >
         Continue to Data Strategy <ArrowRight className="w-5 h-5" />
