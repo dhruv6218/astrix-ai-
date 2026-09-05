@@ -1,28 +1,25 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Signal, Account, Problem, Opportunity, Decision, Artifact, Launch, TeamMember, WorkspaceInvite } from '../types';
+import { Invoice, GatewaySettings, ToneSettings, ActivityItem, AdminUser } from '../types';
 
-// Local Storage Keys
-const STORAGE_KEYS = {
-  SIGNALS: 'astrix_signals',
-  ACCOUNTS: 'astrix_accounts',
-  PROBLEMS: 'astrix_problems',
-  OPPORTUNITIES: 'astrix_opportunities',
-  DECISIONS: 'astrix_decisions',
-  ARTIFACTS: 'astrix_artifacts',
-  LAUNCHES: 'astrix_launches',
-  WORKSPACE: 'astrix_workspace',
+// ─── Storage Keys ───────────────────────────────────────────────────────────
+const KEYS = {
+  INVOICES: 'astrix_invoices',
+  GATEWAYS: 'astrix_gateways',
+  TONE: 'astrix_tone_settings',
+  ACTIVITY: 'astrix_activity',
+  WORKSPACE: 'astrix_demo_workspace',
+  ADMIN_USERS: 'astrix_admin_users',
 };
 
-// Generate unique IDs
-const generateId = () => Math.random().toString(36).substring(2, 15);
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+const genId = () => Math.random().toString(36).substring(2, 15);
 
-// Helper to get/set localStorage
-const getStorage = <T>(key: string, defaultValue: T): T => {
+const getStorage = <T>(key: string, fallback: T): T => {
   try {
     const item = localStorage.getItem(key);
-    return item ? JSON.parse(item) : defaultValue;
+    return item ? JSON.parse(item) : fallback;
   } catch {
-    return defaultValue;
+    return fallback;
   }
 };
 
@@ -34,395 +31,153 @@ const setStorage = <T>(key: string, value: T): void => {
   }
 };
 
-// Global event to trigger refetches
 export const triggerUpdate = () => window.dispatchEvent(new Event('data-updated'));
 
-// Initialize with sample data if empty
-const initializeSampleData = (workspaceId: string) => {
-  const existingSignals = getStorage<Signal[]>(STORAGE_KEYS.SIGNALS, []);
-  
-  if (existingSignals.length === 0) {
-    // Sample Accounts
-    const sampleAccounts: Account[] = [
-      { id: generateId(), workspace_id: workspaceId, name: 'CloudScale Inc', domain: 'cloudscale.io', arr: 240000, plan: 'Enterprise', health_score: '85', created_at: new Date().toISOString() },
-      { id: generateId(), workspace_id: workspaceId, name: 'TechStart GmbH', domain: 'techstart.de', arr: 120000, plan: 'Pro', health_score: '72', created_at: new Date().toISOString() },
-      { id: generateId(), workspace_id: workspaceId, name: 'DataFlow Ltd', domain: 'dataflow.co', arr: 89000, plan: 'Standard', health_score: '91', created_at: new Date().toISOString() },
-      { id: generateId(), workspace_id: workspaceId, name: 'InnovateLab', domain: 'innovatelab.com', arr: 45000, plan: 'Starter', health_score: '68', created_at: new Date().toISOString() },
-      { id: generateId(), workspace_id: workspaceId, name: 'Enterprise Corp', domain: 'enterprisecorp.com', arr: 520000, plan: 'Enterprise', health_score: '55', created_at: new Date().toISOString() },
-    ];
-    setStorage(STORAGE_KEYS.ACCOUNTS, sampleAccounts);
-
-    // Sample Signals
-    const sampleSignals: Signal[] = [
-      { id: generateId(), workspace_id: workspaceId, source_type: 'Slack', raw_text: 'Users are complaining about the new billing page layout. It takes too many clicks to update payment methods.', sentiment_label: 'Negative', severity_label: 'High', product_area: 'Billing', account_id: sampleAccounts[0].id, created_at: new Date().toISOString(), normalized_text: null, category: null },
-      { id: generateId(), workspace_id: workspaceId, source_type: 'Discord', raw_text: 'SAML SSO is throwing a 500 error for our enterprise team. This is blocking our security audit.', sentiment_label: 'Negative', severity_label: 'Critical', product_area: 'Authentication', account_id: sampleAccounts[0].id, created_at: new Date().toISOString(), normalized_text: null, category: null },
-      { id: generateId(), workspace_id: workspaceId, source_type: 'Email', raw_text: 'Love the new dark mode feature! Would be great to have a toggle in the navbar.', sentiment_label: 'Positive', severity_label: 'Low', product_area: 'UI', account_id: sampleAccounts[1].id, created_at: new Date().toISOString(), normalized_text: null, category: null },
-      { id: generateId(), workspace_id: workspaceId, source_type: 'Support Ticket', raw_text: 'API rate limits are too restrictive for our data sync operations. We need at least 10k requests per hour.', sentiment_label: 'Negative', severity_label: 'High', product_area: 'API', account_id: sampleAccounts[2].id, created_at: new Date().toISOString(), normalized_text: null, category: null },
-      { id: generateId(), workspace_id: workspaceId, source_type: 'GitHub', raw_text: 'The webhook delivery is inconsistent. Sometimes events are delayed by hours.', sentiment_label: 'Negative', severity_label: 'Medium', product_area: 'Integrations', account_id: sampleAccounts[3].id, created_at: new Date().toISOString(), normalized_text: null, category: null },
-      { id: generateId(), workspace_id: workspaceId, source_type: 'Interview', raw_text: 'We would switch from competitor X if you had better reporting dashboards.', sentiment_label: 'Neutral', severity_label: 'Medium', product_area: 'Analytics', account_id: sampleAccounts[4].id, created_at: new Date().toISOString(), normalized_text: null, category: null },
-      { id: generateId(), workspace_id: workspaceId, source_type: 'Slack', raw_text: 'The onboarding flow is confusing. New team members struggle to find the invite link.', sentiment_label: 'Negative', severity_label: 'Medium', product_area: 'Onboarding', account_id: sampleAccounts[1].id, created_at: new Date().toISOString(), normalized_text: null, category: null },
-      { id: generateId(), workspace_id: workspaceId, source_type: 'NPS Survey', raw_text: 'Great product but the export functionality is limited. Need CSV export for all data.', sentiment_label: 'Neutral', severity_label: 'Medium', product_area: 'Export', account_id: sampleAccounts[2].id, created_at: new Date().toISOString(), normalized_text: null, category: null },
-    ];
-    setStorage(STORAGE_KEYS.SIGNALS, sampleSignals);
-
-    // Sample Problems
-    const sampleProblems: Problem[] = [
-      { id: generateId(), workspace_id: workspaceId, title: 'SAML SSO Integration Issues', description: 'Enterprise customers are experiencing authentication failures with SAML SSO. This is blocking security audits and causing churn risk.', status: 'Active', severity: 'Critical', trend: 'Rising', product_area: 'Authentication', evidence_count: 24, affected_arr: 760000, created_at: new Date().toISOString() },
-      { id: generateId(), workspace_id: workspaceId, title: 'API Rate Limiting Too Restrictive', description: 'High-volume customers are hitting rate limits during data sync operations, causing business disruption.', status: 'Active', severity: 'High', trend: 'Stable', product_area: 'API', evidence_count: 18, affected_arr: 450000, created_at: new Date().toISOString() },
-      { id: generateId(), workspace_id: workspaceId, title: 'Onboarding Friction', description: 'New users struggle with the initial setup and team invitation process.', status: 'Active', severity: 'Medium', trend: 'Rising', product_area: 'Onboarding', evidence_count: 12, affected_arr: 280000, created_at: new Date().toISOString() },
-    ];
-    setStorage(STORAGE_KEYS.PROBLEMS, sampleProblems);
-
-    // Sample Opportunities
-    const sampleOpportunities: Opportunity[] = [
-      { id: generateId(), workspace_id: workspaceId, problem_id: sampleProblems[0].id, opportunity_score: 92, demand_score: 85, pain_score: 95, arr_score: 90, trend_score: 80, recommended_action: 'Build', problems: sampleProblems[0] },
-      { id: generateId(), workspace_id: workspaceId, problem_id: sampleProblems[1].id, opportunity_score: 78, demand_score: 70, pain_score: 80, arr_score: 75, trend_score: 65, recommended_action: 'Fix', problems: sampleProblems[1] },
-      { id: generateId(), workspace_id: workspaceId, problem_id: sampleProblems[2].id, opportunity_score: 64, demand_score: 60, pain_score: 55, arr_score: 70, trend_score: 60, recommended_action: 'Review', problems: sampleProblems[2] },
-    ];
-    setStorage(STORAGE_KEYS.OPPORTUNITIES, sampleOpportunities);
-
-    // Sample Decisions
-    const sampleDecisions: Decision[] = [
-      { id: generateId(), workspace_id: workspaceId, title: 'Implement SAML SSO', action: 'Build', rationale: 'Critical for enterprise retention. Multiple customers citing security compliance as blocker for renewal.', author_id: 'demo', created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), users: { full_name: 'Demo User' } },
-    ];
-    setStorage(STORAGE_KEYS.DECISIONS, sampleDecisions);
-
-    // Sample Artifacts
-    const sampleArtifacts: Artifact[] = [
-      { id: generateId(), workspace_id: workspaceId, decision_id: sampleDecisions[0].id, title: 'SAML SSO Implementation PRD', type: 'prd', content: `# Product Requirements Document\n\n## Problem Statement\nEnterprise customers are experiencing authentication failures with SAML SSO implementation.\n\n## Evidence\n- 24 signals from high-value accounts\n- $760k ARR at risk\n- Multiple customers citing security compliance as blocker\n\n## Scope\n- Implement SAML 2.0 protocol\n- Support Okta and Azure AD\n- Add SCIM provisioning\n\n## Success Metrics\n- 0 churns citing security compliance in Q2\n- NPS improvement for enterprise segment`, author_id: 'demo', external_url: null, external_id: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString(), decisions: { title: 'Implement SAML SSO' }, users: { full_name: 'Demo User' } },
-    ];
-    setStorage(STORAGE_KEYS.ARTIFACTS, sampleArtifacts);
-
-    // Sample Launches
-    const sampleLaunches: Launch[] = [
-      { id: generateId(), workspace_id: workspaceId, decision_id: sampleDecisions[0].id, title: 'SAML SSO Integration', action: 'Build', launched_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), status: 'active', expected_outcome: 'Reduce enterprise churn citing security compliance to 0', before_count: 24, created_by: 'demo', created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString() },
-    ];
-    setStorage(STORAGE_KEYS.LAUNCHES, sampleLaunches);
-  }
-};
-
-// API object with localStorage-based implementations
-export const api = {
-  signals: {
-    list: async (wsId: string, opts?: any) => {
-      const page = opts?.page ?? 1;
-      const limit = opts?.limit ?? 10;
-      let signals = getStorage<Signal[]>(STORAGE_KEYS.SIGNALS, []).filter(s => s.workspace_id === wsId);
-      
-      if (opts?.globalFilter) {
-        signals = signals.filter(s => 
-          s.raw_text.toLowerCase().includes(opts.globalFilter.toLowerCase()) ||
-          (s.accounts as any)?.name?.toLowerCase().includes(opts.globalFilter.toLowerCase())
-        );
-      }
-      if (opts?.severityFilter) {
-        signals = signals.filter(s => s.severity_label === opts.severityFilter);
-      }
-      if (opts?.sentimentFilter) {
-        signals = signals.filter(s => s.sentiment_label === opts.sentimentFilter);
-      }
-      if (opts?.sourceFilter) {
-        signals = signals.filter(s => s.source_type === opts.sourceFilter);
-      }
-      
-      const total = signals.length;
-      const start = (page - 1) * limit;
-      const rows = signals.slice(start, start + limit);
-      
-      // Attach accounts
-      const accounts = getStorage<Account[]>(STORAGE_KEYS.ACCOUNTS, []);
-      const rowsWithAccounts = rows.map(s => ({
-        ...s,
-        accounts: accounts.find(a => a.id === s.account_id) || null
-      }));
-      
-      return { rows: rowsWithAccounts, total };
-    },
-    create: async (data: Partial<Signal>) => {
-      const signals = getStorage<Signal[]>(STORAGE_KEYS.SIGNALS, []);
-      const newSignal: Signal = {
-        id: generateId(),
-        workspace_id: data.workspace_id!,
-        source_type: data.source_type || 'Manual',
-        raw_text: data.raw_text!,
-        normalized_text: data.normalized_text || null,
-        sentiment_label: data.sentiment_label || 'Neutral',
-        severity_label: data.severity_label || 'Medium',
-        category: data.category || null,
-        product_area: data.product_area || null,
-        account_id: data.account_id || null,
-        created_at: new Date().toISOString(),
-      };
-      signals.push(newSignal);
-      setStorage(STORAGE_KEYS.SIGNALS, signals);
-      triggerUpdate();
-      return newSignal;
-    },
-    get: async (id: string) => {
-      const signals = getStorage<Signal[]>(STORAGE_KEYS.SIGNALS, []);
-      const accounts = getStorage<Account[]>(STORAGE_KEYS.ACCOUNTS, []);
-      const signal = signals.find(s => s.id === id);
-      if (signal) {
-        return { ...signal, accounts: accounts.find(a => a.id === signal.account_id) || null };
-      }
-      return null;
-    }
-  },
-  accounts: {
-    list: async (wsId: string, opts?: any) => {
-      const page = opts?.page ?? 1;
-      const limit = opts?.limit ?? 10;
-      let accounts = getStorage<Account[]>(STORAGE_KEYS.ACCOUNTS, []).filter(a => a.workspace_id === wsId);
-      
-      if (opts?.globalFilter) {
-        accounts = accounts.filter(a => 
-          a.name.toLowerCase().includes(opts.globalFilter.toLowerCase()) ||
-          a.domain?.toLowerCase().includes(opts.globalFilter.toLowerCase())
-        );
-      }
-      
-      const total = accounts.length;
-      const start = (page - 1) * limit;
-      const rows = accounts.slice(start, start + limit);
-      
-      return { rows, total };
-    },
-    create: async (data: Partial<Account>) => {
-      const accounts = getStorage<Account[]>(STORAGE_KEYS.ACCOUNTS, []);
-      const newAccount: Account = {
-        id: generateId(),
-        workspace_id: data.workspace_id!,
-        name: data.name!,
-        domain: data.domain || null,
-        arr: data.arr || 0,
-        plan: data.plan || 'Standard',
-        health_score: data.health_score || null,
-        created_at: new Date().toISOString(),
-      };
-      accounts.push(newAccount);
-      setStorage(STORAGE_KEYS.ACCOUNTS, accounts);
-      triggerUpdate();
-      return newAccount;
-    },
-    get: async (id: string) => {
-      const accounts = getStorage<Account[]>(STORAGE_KEYS.ACCOUNTS, []);
-      const signals = getStorage<Signal[]>(STORAGE_KEYS.SIGNALS, []);
-      const account = accounts.find(a => a.id === id);
-      if (!account) return null;
-      
-      const accountSignals = signals.filter(s => s.account_id === id);
-      return { account, signals: accountSignals, problems: [] };
-    }
-  },
-  problems: {
-    list: async (wsId: string) => {
-      return getStorage<Problem[]>(STORAGE_KEYS.PROBLEMS, []).filter(p => p.workspace_id === wsId);
-    },
-    get: async (id: string) => {
-      const problems = getStorage<Problem[]>(STORAGE_KEYS.PROBLEMS, []);
-      const signals = getStorage<Signal[]>(STORAGE_KEYS.SIGNALS, []);
-      const accounts = getStorage<Account[]>(STORAGE_KEYS.ACCOUNTS, []);
-      
-      const problem = problems.find(p => p.id === id);
-      if (!problem) return null;
-      
-      // Get related signals (simplified - in real app would have proper linking)
-      const relatedSignals = signals.slice(0, problem.evidence_count);
-      const relatedAccountIds = [...new Set(relatedSignals.map(s => s.account_id).filter(Boolean))] as string[];
-      const relatedAccounts = accounts.filter(a => relatedAccountIds.includes(a.id));
-      
-      return { problem, signals: relatedSignals, accounts: relatedAccounts };
-    },
-    create: async (data: Partial<Problem>) => {
-      const problems = getStorage<Problem[]>(STORAGE_KEYS.PROBLEMS, []);
-      const newProblem: Problem = {
-        id: generateId(),
-        workspace_id: data.workspace_id!,
-        title: data.title!,
-        description: data.description || null,
-        status: 'Active',
-        severity: data.severity || 'Medium',
-        trend: 'Stable',
-        product_area: data.product_area || null,
-        evidence_count: 0,
-        affected_arr: 0,
-        created_at: new Date().toISOString(),
-      };
-      problems.push(newProblem);
-      setStorage(STORAGE_KEYS.PROBLEMS, problems);
-      triggerUpdate();
-      return newProblem;
-    }
-  },
-  opportunities: {
-    list: async (wsId: string) => {
-      const opportunities = getStorage<Opportunity[]>(STORAGE_KEYS.OPPORTUNITIES, []).filter(o => o.workspace_id === wsId);
-      const problems = getStorage<Problem[]>(STORAGE_KEYS.PROBLEMS, []);
-      
-      return opportunities.map(o => ({
-        ...o,
-        problems: problems.find(p => p.id === o.problem_id) || null
-      }));
-    },
-    get: async (id: string) => {
-      const opportunities = getStorage<Opportunity[]>(STORAGE_KEYS.OPPORTUNITIES, []);
-      const problems = getStorage<Problem[]>(STORAGE_KEYS.PROBLEMS, []);
-      const opp = opportunities.find(o => o.id === id);
-      if (!opp) return null;
-      
-      return {
-        ...opp,
-        problems: problems.find(p => p.id === opp.problem_id) || null
-      };
-    }
-  },
-  decisions: {
-    list: async (wsId: string) => {
-      const decisions = getStorage<Decision[]>(STORAGE_KEYS.DECISIONS, []).filter(d => d.workspace_id === wsId);
-      return decisions.map(d => ({
-        ...d,
-        users: { full_name: 'Demo User' }
-      }));
-    },
-    get: async (id: string) => {
-      const decisions = getStorage<Decision[]>(STORAGE_KEYS.DECISIONS, []);
-      const dec = decisions.find(d => d.id === id);
-      if (!dec) return null;
-      
-      return {
-        ...dec,
-        users: { full_name: 'Demo User' }
-      };
-    },
-    create: async (data: Partial<Decision>) => {
-      const decisions = getStorage<Decision[]>(STORAGE_KEYS.DECISIONS, []);
-      const newDecision: Decision = {
-        id: generateId(),
-        workspace_id: data.workspace_id!,
-        title: data.title!,
-        action: data.action!,
-        rationale: data.rationale!,
-        author_id: data.author_id || 'demo',
-        created_at: new Date().toISOString(),
-        opportunity_id: data.opportunity_id,
-        problem_id: data.problem_id,
-      };
-      decisions.push(newDecision);
-      setStorage(STORAGE_KEYS.DECISIONS, decisions);
-      triggerUpdate();
-      return newDecision;
-    }
-  },
-  artifacts: {
-    list: async (wsId: string) => {
-      const artifacts = getStorage<Artifact[]>(STORAGE_KEYS.ARTIFACTS, []).filter(a => a.workspace_id === wsId);
-      const decisions = getStorage<Decision[]>(STORAGE_KEYS.DECISIONS, []);
-      
-      return artifacts.map(a => ({
-        ...a,
-        decisions: decisions.find(d => d.id === a.decision_id) ? { title: decisions.find(d => d.id === a.decision_id)!.title } : null,
-        users: { full_name: 'Demo User' }
-      }));
-    },
-    create: async (data: Partial<Artifact>) => {
-      const artifacts = getStorage<Artifact[]>(STORAGE_KEYS.ARTIFACTS, []);
-      const newArtifact: Artifact = {
-        id: generateId(),
-        workspace_id: data.workspace_id!,
-        decision_id: data.decision_id!,
-        title: data.title!,
-        type: data.type || 'prd',
-        content: data.content!,
-        author_id: data.author_id || 'demo',
-        external_url: null,
-        external_id: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      artifacts.push(newArtifact);
-      setStorage(STORAGE_KEYS.ARTIFACTS, artifacts);
-      triggerUpdate();
-      return newArtifact;
-    },
-    update: async (id: string, data: Partial<Artifact>) => {
-      const artifacts = getStorage<Artifact[]>(STORAGE_KEYS.ARTIFACTS, []);
-      const index = artifacts.findIndex(a => a.id === id);
-      if (index !== -1) {
-        artifacts[index] = { ...artifacts[index], ...data, updated_at: new Date().toISOString() };
-        setStorage(STORAGE_KEYS.ARTIFACTS, artifacts);
-        triggerUpdate();
-      }
-    },
-    get: async (id: string) => {
-      const artifacts = getStorage<Artifact[]>(STORAGE_KEYS.ARTIFACTS, []);
-      const decisions = getStorage<Decision[]>(STORAGE_KEYS.DECISIONS, []);
-      const artifact = artifacts.find(a => a.id === id);
-      if (!artifact) return null;
-      
-      return {
-        ...artifact,
-        decisions: decisions.find(d => d.id === artifact.decision_id) ? { title: decisions.find(d => d.id === artifact.decision_id)!.title } : null,
-        users: { full_name: 'Demo User' }
-      };
-    }
-  },
-  launches: {
-    list: async (wsId: string) => {
-      return getStorage<Launch[]>(STORAGE_KEYS.LAUNCHES, []).filter(l => l.workspace_id === wsId);
-    },
-    create: async (data: Partial<Launch>) => {
-      const launches = getStorage<Launch[]>(STORAGE_KEYS.LAUNCHES, []);
-      const newLaunch: Launch = {
-        id: generateId(),
-        workspace_id: data.workspace_id!,
-        decision_id: data.decision_id!,
-        title: data.title!,
-        action: data.action!,
-        launched_at: data.launched_at!,
-        status: 'active',
-        expected_outcome: data.expected_outcome || null,
-        before_count: data.before_count || 0,
-        created_by: data.created_by || 'demo',
-        created_at: new Date().toISOString(),
-      };
-      launches.push(newLaunch);
-      setStorage(STORAGE_KEYS.LAUNCHES, launches);
-      triggerUpdate();
-      return newLaunch;
-    },
-    update: async (id: string, data: Partial<Launch>) => {
-      const launches = getStorage<Launch[]>(STORAGE_KEYS.LAUNCHES, []);
-      const index = launches.findIndex(l => l.id === id);
-      if (index !== -1) {
-        launches[index] = { ...launches[index], ...data };
-        setStorage(STORAGE_KEYS.LAUNCHES, launches);
-        triggerUpdate();
-      }
-    }
-  },
-  team: {
-    list: async (wsId: string) => {
-      return {
-        members: [{ id: '1', workspace_id: wsId, user_id: 'demo', role: 'owner', created_at: new Date().toISOString(), users: { full_name: 'Demo User', email: 'demo@example.com' } }],
-        invites: []
-      };
-    },
-    invite: async () => {
-      throw new Error('Team invitations require backend setup');
-    },
-    removeMember: async () => {
-      throw new Error('Team management requires backend setup');
-    }
-  }
-};
-
-// Initialize sample data on first load
+// ─── Seed Data ────────────────────────────────────────────────────────────────
 export const initializeWorkspace = (workspaceId: string) => {
-  initializeSampleData(workspaceId);
+  const existing = getStorage<Invoice[]>(KEYS.INVOICES, []);
+  if (existing.length > 0) return;
+
+  const now = new Date();
+  const daysAgo = (d: number) => new Date(now.getTime() - d * 86400000).toISOString().split('T')[0];
+
+  const sampleInvoices: Invoice[] = [
+    { id: genId(), workspace_id: workspaceId, client_name: 'Acme Corp', client_email: 'billing@acme.com', amount: 2400, currency: 'USD', due_date: daysAgo(14), status: 'pending', ai_status: 'nudge_sent', last_chased_at: daysAgo(4), reminder_count: 2, days_overdue: 14, created_at: daysAgo(20) },
+    { id: genId(), workspace_id: workspaceId, client_name: 'TechStart GmbH', client_email: 'finance@techstart.de', amount: 1800, currency: 'EUR', due_date: daysAgo(18), status: 'pending', ai_status: 'escalated', last_chased_at: daysAgo(3), reminder_count: 3, days_overdue: 18, created_at: daysAgo(25) },
+    { id: genId(), workspace_id: workspaceId, client_name: 'DataFlow Ltd', client_email: 'accounts@dataflow.co', amount: 890, currency: 'USD', due_date: daysAgo(10), status: 'pending', ai_status: 'pending', last_chased_at: null, reminder_count: 0, days_overdue: 10, created_at: daysAgo(15) },
+    { id: genId(), workspace_id: workspaceId, client_name: 'InnovateLab', client_email: 'pay@innovatelab.com', amount: 1500, currency: 'USD', due_date: daysAgo(30), status: 'paid', ai_status: 'paid', last_chased_at: daysAgo(10), reminder_count: 1, days_overdue: 0, created_at: daysAgo(35) },
+    { id: genId(), workspace_id: workspaceId, client_name: 'CloudScale Inc', client_email: 'ap@cloudscale.io', amount: 3200, currency: 'USD', due_date: daysAgo(25), status: 'paused', ai_status: 'nudge_sent', last_chased_at: daysAgo(5), reminder_count: 2, days_overdue: 25, created_at: daysAgo(30) },
+    { id: genId(), workspace_id: workspaceId, client_name: 'DesignPro Studio', client_email: 'hello@designpro.io', amount: 4500, currency: 'USD', due_date: daysAgo(7), status: 'pending', ai_status: 'nudge_sent', last_chased_at: daysAgo(2), reminder_count: 1, days_overdue: 7, created_at: daysAgo(12) },
+  ];
+  setStorage(KEYS.INVOICES, sampleInvoices);
+
+  const sampleGateways: GatewaySettings[] = [
+    { id: genId(), workspace_id: workspaceId, type: 'stripe', label: 'Stripe', api_key: 'sk_demo_****', is_active: true, created_at: new Date().toISOString() },
+  ];
+  setStorage(KEYS.GATEWAYS, sampleGateways);
+
+  const sampleActivity: ActivityItem[] = [
+    { id: genId(), type: 'reminder_sent', message: 'AI sent a friendly nudge to Acme Corp for Invoice #1042', timestamp: new Date(Date.now() - 2 * 3600000).toISOString(), amount: 2400 },
+    { id: genId(), type: 'payment_received', message: 'Payment received from InnovateLab — Invoice cleared', timestamp: new Date(Date.now() - 5 * 3600000).toISOString(), amount: 1500 },
+    { id: genId(), type: 'escalated', message: 'AI escalated TechStart GmbH to Level 2 (Firm tone)', timestamp: new Date(Date.now() - 86400000).toISOString() },
+    { id: genId(), type: 'invoice_created', message: 'New invoice added for DataFlow Ltd', timestamp: new Date(Date.now() - 2 * 86400000).toISOString(), amount: 890 },
+    { id: genId(), type: 'reminder_sent', message: 'AI sent 2nd reminder to CloudScale Inc', timestamp: new Date(Date.now() - 3 * 86400000).toISOString(), amount: 3200 },
+  ];
+  setStorage(KEYS.ACTIVITY, sampleActivity);
+
+  const sampleAdminUsers: AdminUser[] = [
+    { id: genId(), email: 'sarah@freelance.com', full_name: 'Sarah Johnson', plan: 'Solo', credits_used: 12, status: 'active', created_at: daysAgo(45), invoice_count: 8, total_recovered: 18400 },
+    { id: genId(), email: 'mike@agency.co', full_name: 'Mike Chen', plan: 'Agency', credits_used: 5, status: 'active', created_at: daysAgo(30), invoice_count: 24, total_recovered: 67200 },
+    { id: genId(), email: 'raj@indie.dev', full_name: 'Raj Patel', plan: 'Hook', credits_used: 3, status: 'active', created_at: daysAgo(10), invoice_count: 3, total_recovered: 4200 },
+    { id: genId(), email: 'anna@studio.com', full_name: 'Anna Mueller', plan: 'Solo', credits_used: 0, status: 'suspended', created_at: daysAgo(60), invoice_count: 0, total_recovered: 0 },
+  ];
+  setStorage(KEYS.ADMIN_USERS, sampleAdminUsers);
 };
 
-// React Hooks
-export function useQuery<T>(fetcher: () => Promise<T>, deps: any[]) {
+// ─── Invoice API ──────────────────────────────────────────────────────────────
+export const api = {
+  invoices: {
+    list: async (wsId: string): Promise<Invoice[]> => {
+      return getStorage<Invoice[]>(KEYS.INVOICES, []).filter(i => i.workspace_id === wsId);
+    },
+    create: async (data: Omit<Invoice, 'id' | 'created_at' | 'ai_status' | 'last_chased_at' | 'reminder_count' | 'days_overdue'>): Promise<Invoice> => {
+      const invoices = getStorage<Invoice[]>(KEYS.INVOICES, []);
+      const dueDate = new Date(data.due_date);
+      const today = new Date();
+      const daysOverdue = Math.max(0, Math.floor((today.getTime() - dueDate.getTime()) / 86400000));
+      const newInvoice: Invoice = {
+        ...data,
+        id: genId(),
+        ai_status: 'pending',
+        last_chased_at: null,
+        reminder_count: 0,
+        days_overdue: daysOverdue,
+        created_at: new Date().toISOString(),
+      };
+      invoices.push(newInvoice);
+      setStorage(KEYS.INVOICES, invoices);
+
+      const activity = getStorage<ActivityItem[]>(KEYS.ACTIVITY, []);
+      activity.unshift({ id: genId(), type: 'invoice_created', message: `New invoice added for ${data.client_name}`, timestamp: new Date().toISOString(), amount: data.amount });
+      setStorage(KEYS.ACTIVITY, activity.slice(0, 20));
+
+      triggerUpdate();
+      return newInvoice;
+    },
+    update: async (id: string, data: Partial<Invoice>): Promise<void> => {
+      const invoices = getStorage<Invoice[]>(KEYS.INVOICES, []);
+      const idx = invoices.findIndex(i => i.id === id);
+      if (idx !== -1) {
+        invoices[idx] = { ...invoices[idx], ...data };
+        setStorage(KEYS.INVOICES, invoices);
+        triggerUpdate();
+      }
+    },
+  },
+
+  gateways: {
+    list: async (wsId: string): Promise<GatewaySettings[]> => {
+      return getStorage<GatewaySettings[]>(KEYS.GATEWAYS, []).filter(g => g.workspace_id === wsId);
+    },
+    create: async (data: Omit<GatewaySettings, 'id' | 'created_at'>): Promise<GatewaySettings> => {
+      const gateways = getStorage<GatewaySettings[]>(KEYS.GATEWAYS, []);
+      const newGw: GatewaySettings = { ...data, id: genId(), created_at: new Date().toISOString() };
+      gateways.push(newGw);
+      setStorage(KEYS.GATEWAYS, gateways);
+      triggerUpdate();
+      return newGw;
+    },
+    remove: async (id: string): Promise<void> => {
+      const gateways = getStorage<GatewaySettings[]>(KEYS.GATEWAYS, []).filter(g => g.id !== id);
+      setStorage(KEYS.GATEWAYS, gateways);
+      triggerUpdate();
+    },
+  },
+
+  tone: {
+    get: async (wsId: string): Promise<ToneSettings | null> => {
+      const settings = getStorage<ToneSettings | null>(KEYS.TONE, null);
+      return settings?.workspace_id === wsId ? settings : null;
+    },
+    save: async (data: ToneSettings): Promise<void> => {
+      setStorage(KEYS.TONE, { ...data, updated_at: new Date().toISOString() });
+      triggerUpdate();
+    },
+  },
+
+  activity: {
+    list: async (): Promise<ActivityItem[]> => {
+      return getStorage<ActivityItem[]>(KEYS.ACTIVITY, []);
+    },
+  },
+
+  admin: {
+    listUsers: async (): Promise<AdminUser[]> => {
+      return getStorage<AdminUser[]>(KEYS.ADMIN_USERS, []);
+    },
+    updateUser: async (id: string, data: Partial<AdminUser>): Promise<void> => {
+      const users = getStorage<AdminUser[]>(KEYS.ADMIN_USERS, []);
+      const idx = users.findIndex(u => u.id === id);
+      if (idx !== -1) {
+        users[idx] = { ...users[idx], ...data };
+        setStorage(KEYS.ADMIN_USERS, users);
+        triggerUpdate();
+      }
+    },
+    addCredits: async (id: string, credits: number): Promise<void> => {
+      const users = getStorage<AdminUser[]>(KEYS.ADMIN_USERS, []);
+      const idx = users.findIndex(u => u.id === id);
+      if (idx !== -1) {
+        users[idx].credits_used = Math.max(0, users[idx].credits_used - credits);
+        setStorage(KEYS.ADMIN_USERS, users);
+        triggerUpdate();
+      }
+    },
+  },
+};
+
+// ─── React Hooks ──────────────────────────────────────────────────────────────
+export function useQuery<T>(fetcher: () => Promise<T>, deps: unknown[]) {
   const [data, setData] = useState<T | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -433,13 +188,13 @@ export function useQuery<T>(fetcher: () => Promise<T>, deps: any[]) {
     try {
       const res = await fetcher();
       setData(res);
-    } catch (err: any) {
-      const msg = err?.message || 'Failed to fetch data';
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to fetch data';
       setError(msg);
-      console.error(msg, err);
     } finally {
       setIsLoading(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 
   useEffect(() => {
@@ -451,114 +206,36 @@ export function useQuery<T>(fetcher: () => Promise<T>, deps: any[]) {
   return { data, isLoading, error, refetch: execute };
 }
 
-export const useSignals = (wsId?: string, opts?: any) => {
+export const useInvoices = (wsId?: string) => {
   const { data, isLoading, refetch } = useQuery(async () => {
-    if (!wsId) return { rows: [], total: 0 };
-    return api.signals.list(wsId, opts);
-  }, [wsId, JSON.stringify(opts)]);
-  return { data: data || { rows: [], total: 0 }, isLoading, refetch };
+    if (!wsId) return [];
+    return api.invoices.list(wsId);
+  }, [wsId]);
+  return { data: data || [], isLoading, refetch };
 };
 
-export const useSignal = (id?: string) => {
-  const { data, isLoading } = useQuery(async () => {
-    if (!id) return null;
-    return api.signals.get(id);
-  }, [id]);
-  return { data, isLoading };
-};
-
-export const useAccounts = (wsId?: string, opts?: any) => {
+export const useGateways = (wsId?: string) => {
   const { data, isLoading, refetch } = useQuery(async () => {
-    if (!wsId) return { rows: [], total: 0 };
-    return api.accounts.list(wsId, opts);
-  }, [wsId, JSON.stringify(opts)]);
-  return { data: data || { rows: [], total: 0 }, isLoading, refetch };
+    if (!wsId) return [];
+    return api.gateways.list(wsId);
+  }, [wsId]);
+  return { data: data || [], isLoading, refetch };
 };
 
-export const useAccount = (id?: string) => {
+export const useToneSettings = (wsId?: string) => {
   const { data, isLoading } = useQuery(async () => {
-    if (!id) return null;
-    return api.accounts.get(id);
-  }, [id]);
+    if (!wsId) return null;
+    return api.tone.get(wsId);
+  }, [wsId]);
   return { data, isLoading };
 };
 
-export const useProblems = (wsId?: string) => {
-  const { data, isLoading } = useQuery(async () => {
-    if (!wsId) return [];
-    return api.problems.list(wsId);
-  }, [wsId]);
+export const useActivity = () => {
+  const { data, isLoading } = useQuery(async () => api.activity.list(), []);
   return { data: data || [], isLoading };
 };
 
-export const useProblem = (id?: string) => {
-  const { data, isLoading } = useQuery(async () => {
-    if (!id) return null;
-    return api.problems.get(id);
-  }, [id]);
-  return { data, isLoading };
-};
-
-export const useOpportunities = (wsId?: string) => {
-  const { data, isLoading } = useQuery(async () => {
-    if (!wsId) return [];
-    return api.opportunities.list(wsId);
-  }, [wsId]);
-  return { data: data || [], isLoading };
-};
-
-export const useOpportunity = (id?: string) => {
-  const { data, isLoading } = useQuery(async () => {
-    if (!id) return null;
-    return api.opportunities.get(id);
-  }, [id]);
-  return { data, isLoading };
-};
-
-export const useDecisions = (wsId?: string) => {
-  const { data, isLoading } = useQuery(async () => {
-    if (!wsId) return [];
-    return api.decisions.list(wsId);
-  }, [wsId]);
-  return { data: data || [], isLoading };
-};
-
-export const useDecision = (id?: string) => {
-  const { data, isLoading } = useQuery(async () => {
-    if (!id) return null;
-    return api.decisions.get(id);
-  }, [id]);
-  return { data, isLoading };
-};
-
-export const useArtifacts = (wsId?: string) => {
-  const { data, isLoading } = useQuery(async () => {
-    if (!wsId) return [];
-    return api.artifacts.list(wsId);
-  }, [wsId]);
-  return { data: data || [], isLoading };
-};
-
-export const useArtifact = (id?: string) => {
-  const { data, isLoading } = useQuery(async () => {
-    if (!id) return null;
-    return api.artifacts.get(id);
-  }, [id]);
-  return { data, isLoading };
-};
-
-export const useLaunches = (wsId?: string) => {
-  const { data, isLoading } = useQuery(async () => {
-    if (!wsId) return [];
-    return api.launches.list(wsId);
-  }, [wsId]);
-  return { data: data || [], isLoading };
-};
-
-export const useTeam = (wsId?: string) => {
-  const { data, isLoading } = useQuery(async () => {
-    if (!wsId) return { members: [], invites: [] };
-    return api.team.list(wsId);
-  }, [wsId]);
-  return { data: data || { members: [], invites: [] }, isLoading };
+export const useAdminUsers = () => {
+  const { data, isLoading, refetch } = useQuery(async () => api.admin.listUsers(), []);
+  return { data: data || [], isLoading, refetch };
 };

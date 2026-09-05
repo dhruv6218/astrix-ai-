@@ -9,7 +9,6 @@ export const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ childr
   const { workspaces, isWorkspaceInitializing } = useWorkspace();
   const location = useLocation();
 
-  // Block rendering until both Auth and Workspace hydration complete
   if (isInitializing || (user && isWorkspaceInitializing)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -18,19 +17,10 @@ export const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ childr
     );
   }
 
-  if (!user) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
+  if (!user) return <Navigate to="/login" state={{ from: location }} replace />;
 
   const isAppRoute = location.pathname.startsWith('/app');
-  if (isAppRoute && workspaces.length === 0) {
-    return <Navigate to="/onboarding/step-1" replace />;
-  }
-
-  const isOnboardingRoot = location.pathname === '/onboarding';
-  if (isOnboardingRoot && workspaces.length > 0) {
-     return <Navigate to="/app" replace />;
-  }
+  if (isAppRoute && workspaces.length === 0) return <Navigate to="/onboarding/step-1" replace />;
 
   return <>{children}</>;
 };

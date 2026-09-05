@@ -21,11 +21,9 @@ export const EmpireSection = () => {
 
   return (
     <footer className="relative bg-white text-gray-900 overflow-hidden pt-32 md:pt-40 pb-12 border-t border-gray-100" ref={ref}>
-      {/* Massive Glowing Aura */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[100vw] h-[100vh] bg-brand-blue/5 blur-[200px] rounded-full pointer-events-none"></div>
 
       <div className="max-w-[1400px] mx-auto px-6 md:px-12 relative z-10 flex flex-col items-center text-center">
-        
         <div className="text-brand-blue font-mono text-xs tracking-widest uppercase mb-8 font-bold bg-brand-blue/5 px-4 py-2 rounded-full">
           Get Started Today
         </div>
@@ -33,7 +31,7 @@ export const EmpireSection = () => {
         <h2 className={`font-heading text-fluid-2 leading-[0.9] tracking-tighter mb-8 md:mb-10 transition-all duration-700 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
           Your unpaid invoices <br/> <span className="text-gray-300 text-stroke">deserve attention.</span>
         </h2>
-        
+
         <p className={`text-lg md:text-xl text-gray-500 font-medium max-w-2xl mb-12 md:mb-16 transition-all duration-700 delay-100 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
           The era of awkward follow-ups is over. Join freelancers who get paid on autopilot. Setup takes under 5 minutes.
         </p>
@@ -51,44 +49,39 @@ export const EmpireSection = () => {
           </MagneticButton>
         </div>
 
-        {/* Clean 4-Column Footer Grid */}
+        {/* Clean Footer Grid */}
         <div className="w-full border-t border-gray-100 pt-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 text-left">
-          
-          {/* Brand Column */}
+          {/* Brand */}
           <div className="md:col-span-2">
-            <Link to="/" onClick={(e) => handleNavClick(e, '/')} className="flex items-center gap-3 mb-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue rounded-lg w-max">
-              <img 
-                src="https://images.dualite.app/102e86e1-720e-45cc-9e4e-55e865135e96/asset-b9a7a63e-c65a-4fa8-9433-c13564a7364e.webp" 
-                alt="Astrix Logo" 
-                className="h-10 w-auto object-contain grayscale opacity-80 hover:grayscale-0 hover:opacity-100 transition-all duration-300"
-              />
+            <Link to="/" className="flex items-center gap-3 mb-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue rounded-lg w-max">
+              <img src="https://images.dualite.app/102e86e1-720e-45cc-9e4e-55e865135e96/asset-b9a7a63e-c65a-4fa8-9433-c13564a7364e.webp" alt="Astrix Logo" className="h-10 w-auto object-contain grayscale opacity-80 hover:grayscale-0 hover:opacity-100 transition-all duration-300" />
               <div className="font-heading text-xl font-black tracking-tighter text-gray-900">ASTRIX</div>
             </Link>
             <p className="text-gray-500 text-sm font-medium max-w-xs mb-8 leading-relaxed">
               The Autonomous Revenue Recovery Agent for Freelancers. Stop chasing, start recovering.
             </p>
-            <div className="font-sans text-xs text-gray-400 font-medium">
-              © 2026 Astrix AI Inc. All rights reserved.
-            </div>
+            <div className="font-sans text-xs text-gray-400 font-medium">© 2026 Astrix AI Inc. All rights reserved.</div>
           </div>
-          
-          {/* Product Column */}
+
+          {/* Product */}
           <div>
             <h4 className="font-bold text-gray-900 mb-6 font-heading">Product</h4>
             <ul className="space-y-4 text-sm text-gray-500 font-medium">
-              <li><Link to="/#features" onClick={(e) => handleNavClick(e, '/#features')} className="hover:text-brand-blue transition-colors focus-visible:outline-none focus-visible:text-brand-blue">Features</Link></li>
-              <li><Link to="/pricing" className="hover:text-brand-blue transition-colors focus-visible:outline-none focus-visible:text-brand-blue">Pricing</Link></li>
+              <li><Link to="/#features" onClick={(e) => handleNavClick(e, '/#features')} className="hover:text-brand-blue transition-colors">Features</Link></li>
+              <li><Link to="/pricing" className="hover:text-brand-blue transition-colors">Pricing</Link></li>
+              <li><Link to="/contact" className="hover:text-brand-blue transition-colors">Contact</Link></li>
             </ul>
           </div>
 
+          {/* Legal */}
           <div>
-            <h4 className="font-bold text-gray-900 mb-6 font-heading">Company & Legal</h4>
+            <h4 className="font-bold text-gray-900 mb-6 font-heading">Legal</h4>
             <ul className="space-y-4 text-sm text-gray-500 font-medium">
-              <li><Link to="/privacy" className="hover:text-brand-blue transition-colors focus-visible:outline-none focus-visible:text-brand-blue">Privacy Policy</Link></li>
-              <li><Link to="/terms" className="hover:text-brand-blue transition-colors focus-visible:outline-none focus-visible:text-brand-blue">Terms of Service</Link></li>
+              <li><Link to="/privacy" className="hover:text-brand-blue transition-colors">Privacy Policy</Link></li>
+              <li><Link to="/terms" className="hover:text-brand-blue transition-colors">Terms of Service</Link></li>
+              <li><Link to="/refund" className="hover:text-brand-blue transition-colors">Refund Policy</Link></li>
             </ul>
           </div>
-
         </div>
       </div>
     </footer>

@@ -1,6 +1,4 @@
-// Frontend-only: Supabase is disabled
-// This file provides mock implementations for type compatibility
-
+// Frontend-only: Supabase disabled — all data lives in localStorage
 export const supabase = {
   auth: {
     getSession: async () => ({ data: { session: null }, error: null }),
@@ -17,17 +15,12 @@ export const supabase = {
       eq: () => ({
         single: async () => ({ data: null, error: null }),
         maybeSingle: async () => ({ data: null, error: null }),
-        order: () => ({ range: async () => ({ data: [], count: 0, error: null }) }),
-        in: () => ({ order: () => ({ range: async () => ({ data: [], count: 0, error: null }) }) }),
       }),
-      order: () => ({ range: async () => ({ data: [], count: 0, error: null }) }),
     }),
     insert: async () => ({ data: null, error: null }),
-    update: async () => ({ error: null }),
+    update: () => ({ eq: async () => ({ error: null }) }),
     delete: async () => ({ error: null }),
   }),
   rpc: async () => ({ data: null, error: { message: 'Backend disabled' } }),
-  functions: {
-    invoke: async () => ({ data: null, error: { message: 'Backend disabled' } }),
-  },
+  functions: { invoke: async () => ({ data: null, error: { message: 'Backend disabled' } }) },
 };
