@@ -78,7 +78,7 @@ export const Login = () => {
 
         <form className="space-y-5" onSubmit={handleSubmit}>
           <div>
-            <label className="block text-sm font-bold text-gray-900 mb-2" htmlFor="email">Work Email</label>
+            <label className="block text-sm font-bold text-gray-900 mb-2" htmlFor="email">Email Address</label>
             <input 
               type="email" 
               id="email"

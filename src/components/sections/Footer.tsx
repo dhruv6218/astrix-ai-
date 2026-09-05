@@ -13,7 +13,7 @@ export const Footer = () => {
               Astrix<span className="text-brand-blue">.AI</span>
             </Link>
             <p className="text-sm text-gray-400 font-medium max-w-xs">
-              The accountability layer for product teams. Turn customer signals into ranked decisions and launch verdicts.
+              The autonomous revenue recovery agent for freelancers. Stop chasing, start recovering.
             </p>
           </div>
           

@@ -18,105 +18,76 @@ export const Pricing = () => {
 
   const tiers = [
     {
-      name: "Free",
-      monthlyPrice: "₹0",
-      annualPrice: "₹0",
+      name: "Hook",
+      monthlyPrice: "$0",
+      annualPrice: "$0", 
       period: "/month",
       annualBilled: "Free forever",
-      desc: "For solo founders and PMs validating the evidence-based product loop.",
+      desc: "First 3 successful invoice recoveries for free. No credit card required.",
       features: [
-        "1 Member, 2 Viewers",
-        "1 Workspace",
-        "200 signals / month",
-        "100 AI Classifications / month",
-        "5 AI Memos / month",
-        "Standard Launch Reviews",
-        "AI Model: Gemini",
+        "3 Free Recoveries",
+        "1 Connected Gateway",
+        "AI Tone Cloning",
+        "Basic Dashboard",
+        "Email Reminders",
       ],
       comingSoon: [
-        "Advanced Analytics"
+        "Priority Support"
       ],
       cta: "Start Free",
       popular: false
     },
     {
-      name: "Starter",
-      monthlyPrice: "₹59",
-      annualPrice: "₹49", 
+      name: "Solo",
+      monthlyPrice: "$29",
+      annualPrice: "$24", 
       period: "/month",
-      annualBilled: "Billed ₹588 yearly",
-      desc: "For early-stage startups establishing their first evidence-based product loop.",
+      annualBilled: "Billed $288 yearly",
+      desc: "For solo freelancers who want unlimited recovery on autopilot.",
       features: [
-        "3 Members, Unlimited Viewers",
-        "1 Workspace",
-        "2,000 signals / month",
-        "500 AI Classifications / month",
-        "20 AI Memos / month",
-        "Standard Launch Reviews",
-        "AI Model: Gemini",
+        "Unlimited Invoices",
+        "Unlimited Recoveries",
+        "1 Connected Gateway",
+        "AI Tone Cloning",
+        "Smart Escalation",
+        "Payment Tracking",
       ],
       comingSoon: [
-        "Advanced Analytics"
+        "Priority Support"
       ],
-      cta: "Start with Starter",
-      popular: false
-    },
-    {
-      name: "Growth",
-      monthlyPrice: "₹179",
-      annualPrice: "₹149", 
-      period: "/month",
-      annualBilled: "Billed ₹1,788 yearly",
-      desc: "For scaling product teams that need deeper signal volume and team collaboration.",
-      features: [
-        "8 Members, Unlimited Viewers",
-        "1 Workspace",
-        "10,000 signals / month",
-        "2,500 AI Classifications / month",
-        "100 AI Memos / month",
-        "Ask Assistant",
-        "Advanced Launch Reviews",
-        "AI Model: Gemini + OpenRouter",
-      ],
-      comingSoon: [
-        "Advanced Analytics"
-      ],
-      cta: "Start with Growth",
+      cta: "Start with Solo",
       popular: true
     },
     {
-      name: "Scale",
-      monthlyPrice: "₹449",
-      annualPrice: "₹369", 
+      name: "Agency",
+      monthlyPrice: "$99",
+      annualPrice: "$79", 
       period: "/month",
-      annualBilled: "Billed ₹4,428 yearly",
-      desc: "For large organizations requiring maximum volume, security, and premium AI models.",
+      annualBilled: "Billed $948 yearly",
+      desc: "For boutique agencies managing multiple clients and team members.",
       features: [
-        "20 Members, Unlimited Viewers",
-        "10 Workspaces",
-        "50,000 signals / month",
-        "10,000 AI Classifications / month",
-        "500 AI Memos / month",
-        "Ask Assistant",
-        "Audit Log & Priority Support",
-        "Advanced Launch Reviews",
-        "AI Model: Grok",
+        "Everything in Solo",
+        "5 Team Members",
+        "5 Connected Gateways",
+        "White-Label Domain",
+        "Custom Branding",
+        "Priority Support",
+        "API Access",
       ],
       comingSoon: [
-        "Advanced Analytics",
-        "Jira Two-Way Sync"
+        "Advanced Analytics"
       ],
-      cta: "Start with Scale",
+      cta: "Start with Agency",
       popular: false
     }
   ];
 
   const faqs = [
-    { q: "What counts as a 'signal'?", a: "A signal is any individual piece of feedback ingested into Astrix — a support ticket, app store review, interview note, or a row in a CSV upload." },
-    { q: "What are the user roles?", a: "We keep it simple: Owners (billing & settings), Members (editors who can create decisions and artifacts), and Viewers (free, unlimited users who can read memos and track launch progress)." },
-    { q: "How do I import data?", a: "Astrix supports CSV upload and manual signal entry on all plans. You can also start with a sample workspace to explore the full product loop before importing real data." },
-    { q: "Does Astrix include a sample workspace?", a: "Yes. Every plan includes a sample workspace with pre-loaded signals, problems, opportunities, a decision memo, and an active launch so you can experience the full product loop immediately." },
-    { q: "Is my data used to train your AI models?", a: "Absolutely not. We use enterprise APIs with strict zero-retention policies. Your workspace data is isolated and never used for training." },
+    { q: "What counts as a 'recovery'?", a: "A recovery is when an overdue invoice is successfully paid after Astrix sends one or more AI-powered reminders. You're only charged for actual results." },
+    { q: "Which payment gateways are supported?", a: "We support Stripe (via OAuth/API keys), Razorpay (API keys), and custom static links (UPI, PayPal, etc.). More gateways are added regularly." },
+    { q: "How does AI tone cloning work?", a: "You paste 2-3 of your past emails, and our AI learns your writing style — friendly, firm, or somewhere in between. Every reminder sounds like it came from you." },
+    { q: "Can I pause reminders for a specific invoice?", a: "Yes! Every invoice has a 'Pause AI' button. You can also mark invoices as disputed or paid manually at any time." },
+    { q: "Is my data secure?", a: "Absolutely. We use enterprise-grade encryption, and your data is never used to train AI models. We're SOC 2 compliant." },
     { q: "Can I cancel anytime?", a: "Yes, you can cancel your subscription at any time from the billing settings. You will retain access until the end of your current billing period." }
   ];
 
@@ -144,10 +115,10 @@ export const Pricing = () => {
         <div className="max-w-[1400px] mx-auto px-6 md:px-12 text-center" ref={headerRef}>
           <h1 className={`font-heading text-fluid-2 leading-[0.9] tracking-tighter text-gray-900 mb-6 transition-all duration-700 ${headerVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
             Simple pricing. <br/>
-            <span className="text-brand-blue">Serious value.</span>
+            <span className="text-brand-blue">Pay for results.</span>
           </h1>
           <p className={`text-lg md:text-xl text-gray-600 font-medium max-w-2xl mx-auto mb-10 transition-all duration-700 delay-100 ${headerVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
-            The accountability loop for every stage of growth.
+            Start free. Only pay when you see results.
           </p>
 
           {/* Billing Toggle */}
@@ -169,7 +140,7 @@ export const Pricing = () => {
 
       {/* Pricing Cards */}
       <div className="max-w-[1400px] mx-auto px-4 md:px-6 -mt-12 relative z-10 mb-32" ref={cardsRef}>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 max-w-[1400px] mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 max-w-[1200px] mx-auto">
           {tiers.map((tier, i) => (
             <div 
               key={i} 
@@ -191,7 +162,7 @@ export const Pricing = () => {
                 {tier.period && <span className={`text-sm font-bold ${tier.popular ? 'text-blue-200' : 'text-gray-400'}`}>{tier.period}</span>}
               </div>
               <div className={`text-xs font-medium mb-8 h-4 ${tier.popular ? 'text-blue-200' : 'text-gray-400'}`}>
-                {isAnnual && tier.annualPrice !== "₹0" ? tier.annualBilled : (tier.annualPrice === "₹0" ? "Free forever" : "Billed monthly")}
+                {isAnnual && tier.annualPrice !== "$0" ? tier.annualBilled : (tier.annualPrice === "$0" ? "Free forever" : "Billed monthly")}
               </div>
 
               <ul className="space-y-4 mb-8 flex-1">

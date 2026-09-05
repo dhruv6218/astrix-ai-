@@ -16,11 +16,11 @@ export const ClaritySection = () => {
       <div className="max-w-[1400px] mx-auto px-6 md:px-12 relative z-10">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-16 md:mb-24 gap-6 md:gap-10">
           <h2 className="font-heading text-fluid-2 leading-[0.9] tracking-tighter uppercase max-w-3xl">
-            From Signal <br/>
-            <span className="text-brand-blue">To Shipped.</span>
+            From Invoice <br/>
+            <span className="text-brand-blue">To Paid.</span>
           </h2>
           <p className="text-lg md:text-xl text-gray-600 max-w-md font-medium">
-            The complete accountability loop. Astrix reads the noise, scores the impact, and tracks whether your decisions actually worked.
+            The complete recovery loop. Astrix tracks your invoices, clones your voice, sends reminders, and confirms when you get paid.
           </p>
         </div>
 
@@ -30,12 +30,12 @@ export const ClaritySection = () => {
           <div className="hidden lg:block absolute top-1/2 left-0 w-full h-[2px] bg-gray-200 -translate-y-1/2 z-0"></div>
           
           {[
-            { step: "01", title: "Signals", desc: "Ingest feedback & CSVs" },
-            { step: "02", title: "Problems", desc: "AI clusters the noise" },
-            { step: "03", title: "Opportunities", desc: "Score by ARR & pain" },
-            { step: "04", title: "Decisions", desc: "Compare and commit" },
-            { step: "05", title: "Launches", desc: "Ship & track metrics" },
-            { step: "06", title: "Verdicts", desc: "Prove it worked" }
+            { step: "01", title: "Invoices", desc: "Upload or sync invoices" },
+            { step: "02", title: "AI Tone", desc: "Clone your writing style" },
+            { step: "03", title: "Reminders", desc: "Auto-send follow-ups" },
+            { step: "04", title: "Checkout", desc: "1-click payment links" },
+            { step: "05", title: "Tracking", desc: "Monitor payment status" },
+            { step: "06", title: "Recovered", desc: "Get paid on autopilot" }
           ].map((item, i) => (
             <div key={i} className={`relative z-10 bg-white p-5 md:p-6 border border-gray-200 shadow-lg shadow-gray-200/50 rounded-2xl hover:border-brand-blue transition-colors duration-500 group flex flex-col justify-between h-40 md:h-56 transform transition-transform duration-700 delay-${i * 100} ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0'}`}>
               <div className="text-xs md:text-sm font-mono text-gray-400 font-bold">{item.step}</div>

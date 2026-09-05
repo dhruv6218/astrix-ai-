@@ -1,9 +1,16 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+
+interface User {
+  id: string;
+  email: string;
+  user_metadata: {
+    full_name: string;
+  };
+}
 
 interface AuthContextType {
   session: any;
-  user: any;
+  user: User | null;
   isInitializing: boolean;
   signOut: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
@@ -25,85 +32,107 @@ const AuthContext = createContext<AuthContextType>({
   updatePassword: async () => ({ error: null }),
 });
 
+const STORAGE_KEY = 'astrix_demo_user';
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [session, setSession] = useState<any>(null);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
-    let isMounted = true;
-
-    const hydrateSession = async () => {
-      setIsInitializing(true);
-      const { data, error } = await supabase.auth.getSession();
-      if (!isMounted) return;
-      if (!error) {
-        setSession(data.session);
-        setUser(data.session?.user ?? null);
+    // Check for existing session in localStorage
+    const storedUser = localStorage.getItem(STORAGE_KEY);
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch {
+        localStorage.removeItem(STORAGE_KEY);
       }
-      setIsInitializing(false);
-    };
-
-    hydrateSession();
-
-    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      if (!isMounted) return;
-      setSession(nextSession);
-      setUser(nextSession?.user ?? null);
-      setIsInitializing(false);
-    });
-
-    return () => {
-      isMounted = false;
-      data.subscription.unsubscribe();
-    };
+    }
+    setIsInitializing(false);
   }, []);
 
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error?.message ?? null };
+  const signIn = async (email: string, password: string): Promise<{ error: string | null }> => {
+    // Demo: Accept any email/password combination
+    if (!email || !password) {
+      return { error: 'Email and password are required' };
+    }
+    
+    const newUser: User = {
+      id: 'demo-user-' + Math.random().toString(36).substring(7),
+      email: email,
+      user_metadata: {
+        full_name: email.split('@')[0]
+      }
+    };
+    
+    setUser(newUser);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(newUser));
+    return { error: null };
   };
 
-  const signUp = async (email: string, password: string, name: string) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: name }
+  const signUp = async (email: string, password: string, name: string): Promise<{ error: string | null; needsConfirmation: boolean }> => {
+    if (!email || !password || !name) {
+      return { error: 'All fields are required' };
+    }
+    
+    if (password.length < 8) {
+      return { error: 'Password must be at least 8 characters' };
+    }
+    
+    const newUser: User = {
+      id: 'demo-user-' + Math.random().toString(36).substring(7),
+      email: email,
+      user_metadata: {
+        full_name: name
       }
-    });
-
-    const needsConfirmation = !data.session;
-    return { error: error?.message ?? null, needsConfirmation };
+    };
+    
+    setUser(newUser);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(newUser));
+    return { error: null, needsConfirmation: false };
   };
 
   const signInWithGoogle = async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/app`
+    // Demo: Simulate Google sign-in
+    const newUser: User = {
+      id: 'demo-google-user',
+      email: 'demo@example.com',
+      user_metadata: {
+        full_name: 'Demo User'
       }
-    });
+    };
+    
+    setUser(newUser);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(newUser));
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    setUser(null);
+    localStorage.removeItem(STORAGE_KEY);
   };
 
-  const resetPassword = async (email: string) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`
-    });
-    return { error: error?.message ?? null };
+  const resetPassword = async (email: string): Promise<{ error: string | null }> => {
+    // Demo: Always succeed
+    return { error: null };
   };
 
-  const updatePassword = async (password: string) => {
-    const { error } = await supabase.auth.updateUser({ password });
-    return { error: error?.message ?? null };
+  const updatePassword = async (password: string): Promise<{ error: string | null }> => {
+    // Demo: Always succeed
+    return { error: null };
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, isInitializing, signOut, signIn, signUp, signInWithGoogle, resetPassword, updatePassword }}>
+    <AuthContext.Provider value={{ 
+      session: user ? { user } : null, 
+      user, 
+      isInitializing, 
+      signOut, 
+      signIn, 
+      signUp, 
+      signInWithGoogle,
+      resetPassword,
+      updatePassword
+    }}>
       {children}
     </AuthContext.Provider>
   );

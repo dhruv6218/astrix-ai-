@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { Workspace } from '../types';
-import { supabase } from '../lib/supabase';
+import { initializeWorkspace } from '../lib/api';
 
 interface WorkspaceContextType {
   activeWorkspace: Workspace | null;
@@ -19,6 +19,8 @@ const WorkspaceContext = createContext<WorkspaceContextType>({
   refreshWorkspaces: async () => {},
 });
 
+const STORAGE_KEY = 'astrix_demo_workspace';
+
 export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
@@ -35,48 +37,43 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       return;
     }
 
-    const { data, error } = await supabase
-      .from('workspace_members')
-      .select(`
-        workspace_id,
-        workspaces (
-          id,
-          name,
-          slug,
-          timezone,
-          logo_url,
-          created_at,
-          product_areas,
-          segments
-        )
-      `)
-      .eq('user_id', user.id);
-
-    if (error) {
-      console.error('Failed to fetch workspaces:', error.message);
-      setWorkspaces([]);
-      setActiveWorkspace(null);
-      setIsWorkspaceInitializing(false);
-      return;
+    // Demo: Create a default workspace if none exists
+    const storedWorkspace = localStorage.getItem(STORAGE_KEY);
+    
+    if (storedWorkspace) {
+      try {
+        const ws = JSON.parse(storedWorkspace) as Workspace;
+        setWorkspaces([ws]);
+        setActiveWorkspace(ws);
+        initializeWorkspace(ws.id);
+      } catch {
+        localStorage.removeItem(STORAGE_KEY);
+      }
+    } else {
+      // Create default workspace
+      const defaultWorkspace: Workspace = {
+        id: 'demo-workspace-' + Math.random().toString(36).substring(7),
+        name: 'My Workspace',
+        slug: 'my-workspace',
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+        logo_url: null,
+        product_areas: ['Authentication', 'Dashboard', 'API', 'Billing'],
+        segments: ['Enterprise', 'SMB', 'Self-Serve'],
+        created_at: new Date().toISOString(),
+      };
+      
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultWorkspace));
+      setWorkspaces([defaultWorkspace]);
+      setActiveWorkspace(defaultWorkspace);
+      initializeWorkspace(defaultWorkspace.id);
     }
-
-    const fetchedWorkspaces = (data ?? [])
-      .map((row: any) => row.workspaces)
-      .filter(Boolean) as Workspace[];
-
-    setWorkspaces(fetchedWorkspaces);
-
-    setActiveWorkspace((prev) => {
-      if (!fetchedWorkspaces.length) return null;
-      const matched = prev ? fetchedWorkspaces.find((w) => w.id === prev.id) : null;
-      return matched ?? fetchedWorkspaces[0];
-    });
 
     setIsWorkspaceInitializing(false);
   };
 
   const handleSetActiveWorkspace = (ws: Workspace) => {
     setActiveWorkspace(ws);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(ws));
   };
 
   useEffect(() => {

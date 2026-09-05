@@ -27,24 +27,13 @@ import { Step1Workspace } from './pages/onboarding/Step1Workspace';
 import { Step2Data } from './pages/onboarding/Step2Data';
 import { Step3Results } from './pages/onboarding/Step3Results';
 
-// App Pages
+// App Pages — Revenue Recovery SaaS
 import { Dashboard } from './pages/app/Dashboard';
-import { SignalExplorer } from './pages/app/SignalExplorer';
-import { AccountsList } from './pages/app/AccountsList';
-import { ProblemsList } from './pages/app/ProblemsList';
-import { ProblemDetail } from './pages/app/ProblemDetail';
-import { OpportunitiesList } from './pages/app/OpportunitiesList';
-import { OpportunityDetail } from './pages/app/OpportunityDetail';
-import { EvidenceView } from './pages/app/EvidenceView';
-import { DecisionsHistory } from './pages/app/DecisionsHistory';
-import { DecisionDetail } from './pages/app/DecisionDetail';
-import { ArtifactStudio } from './pages/app/ArtifactStudio';
-import { ArtifactDetail } from './pages/app/ArtifactDetail';
-import { PostLaunchTracker } from './pages/app/PostLaunchTracker';
-import { LaunchDetail } from './pages/app/LaunchDetail';
-import { Assistant } from './pages/app/Assistant';
+import { Invoices } from './pages/app/Invoices';
+import { ToneStudio } from './pages/app/ToneStudio';
+import { Gateways } from './pages/app/Gateways';
+import { Analytics } from './pages/app/Analytics';
 import { Settings } from './pages/app/Settings';
-import { AccountDetail } from './pages/app/AccountDetail';
 
 function App() {
   useMousePosition();
@@ -72,42 +61,19 @@ function App() {
 
               {/* Protected Onboarding Flow */}
               <Route path="/onboarding" element={<Navigate to="/onboarding/step-1" replace />} />
-              <Route path="/onboarding/workspace" element={<Navigate to="/onboarding/step-1" replace />} />
               <Route path="/onboarding/step-1" element={<ProtectedRoute><Step1Workspace /></ProtectedRoute>} />
               <Route path="/onboarding/step-2" element={<ProtectedRoute><Step2Data /></ProtectedRoute>} />
               <Route path="/onboarding/step-3" element={<ProtectedRoute><Step3Results /></ProtectedRoute>} />
 
-              {/* Protected Main App Routes */}
+              {/* Protected App Routes — Revenue Recovery */}
               <Route path="/app" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/app/dashboard" element={<Navigate to="/app" replace />} />
-              
-              <Route path="/app/signals" element={<ProtectedRoute><SignalExplorer /></ProtectedRoute>} />
-              <Route path="/app/signals/new" element={<ProtectedRoute><SignalExplorer defaultOpenAdd /></ProtectedRoute>} />
-              <Route path="/app/signals/:id" element={<ProtectedRoute><SignalExplorer /></ProtectedRoute>} />
-              
-              <Route path="/app/accounts" element={<ProtectedRoute><AccountsList /></ProtectedRoute>} />
-              <Route path="/app/accounts/:id" element={<ProtectedRoute><AccountDetail /></ProtectedRoute>} />
-              
-              <Route path="/app/problems" element={<ProtectedRoute><ProblemsList /></ProtectedRoute>} />
-              <Route path="/app/problems/:id" element={<ProtectedRoute><ProblemDetail /></ProtectedRoute>} />
-              
-              <Route path="/app/opportunities" element={<ProtectedRoute><OpportunitiesList /></ProtectedRoute>} />
-              <Route path="/app/opportunities/:id" element={<ProtectedRoute><OpportunityDetail /></ProtectedRoute>} />
-              <Route path="/app/evidence/:problemId" element={<ProtectedRoute><EvidenceView /></ProtectedRoute>} />
-              
-              <Route path="/app/decisions" element={<ProtectedRoute><DecisionsHistory /></ProtectedRoute>} />
-              <Route path="/app/decisions/:id" element={<ProtectedRoute><DecisionDetail /></ProtectedRoute>} />
-
-              <Route path="/app/artifacts" element={<ProtectedRoute><ArtifactStudio /></ProtectedRoute>} />
-              <Route path="/app/artifacts/:id" element={<ProtectedRoute><ArtifactDetail /></ProtectedRoute>} />
-              
-              <Route path="/app/launches" element={<ProtectedRoute><PostLaunchTracker /></ProtectedRoute>} />
-              <Route path="/app/launches/:id" element={<ProtectedRoute><LaunchDetail /></ProtectedRoute>} />
-              
-              <Route path="/app/assistant" element={<ProtectedRoute><Assistant /></ProtectedRoute>} />
-              
+              <Route path="/app/invoices" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
+              <Route path="/app/tone" element={<ProtectedRoute><ToneStudio /></ProtectedRoute>} />
+              <Route path="/app/gateways" element={<ProtectedRoute><Gateways /></ProtectedRoute>} />
+              <Route path="/app/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
               <Route path="/app/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-              
+
               {/* Catch all 404 */}
               <Route path="*" element={<NotFound />} />
             </Routes>

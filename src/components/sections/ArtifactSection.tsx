@@ -7,21 +7,17 @@ export const ArtifactSection = () => {
   const [text, setText] = useState('');
   const [hasRun, setHasRun] = useState(false);
   
-  const fullText = `## Product Requirements Document
+  const fullText = `## AI-Generated Reminder
 
-**Problem Statement:**
-Enterprise accounts are churning due to lack of SAML SSO.
+**Invoice:** #1042 for Acme Corp
+**Amount:** $2,400
+**Days Overdue:** 14 days
 
-**Evidence:**
-"We cannot renew our $120k contract without Okta integration." - CloudScale Inc.
+**Draft:**
+"Hey! Just bumping this to the top of your inbox. Let me know if you need anything else from my end to process this. Here's a quick link to pay: pay.astrix.ai/1042"
 
-**Scope:**
-- Implement SAML 2.0
-- Okta & Azure AD support
-- SCIM provisioning
-
-**Success Metrics:**
-- 0 churns citing security compliance next quarter.
+**Tone:** Friendly (Level 2)
+**Next Step:** Send now or schedule for tomorrow morning.
 `;
 
   useEffect(() => {
@@ -47,7 +43,7 @@ Enterprise accounts are churning due to lack of SAML SSO.
         <div className={`relative z-10 bg-white shadow-xl shadow-gray-200/50 border border-gray-200 rounded-2xl p-6 md:p-8 h-[400px] md:h-[450px] flex flex-col transition-all duration-700 ${isVisible ? 'translate-x-0 opacity-100' : '-translate-x-10 opacity-0'}`}>
           <div className="flex items-center gap-3 border-b border-gray-100 pb-4 mb-6">
             <FileText className="w-5 h-5 text-brand-blue" />
-            <span className="font-mono text-xs md:text-sm text-gray-500 font-bold">Artifact Studio / AI Generation</span>
+            <span className="font-mono text-xs md:text-sm text-gray-500 font-bold">Tone Studio / AI Draft</span>
           </div>
           <div className="font-mono text-xs md:text-sm text-gray-700 whitespace-pre-wrap flex-1 overflow-hidden font-medium leading-relaxed">
             {text}
@@ -56,9 +52,9 @@ Enterprise accounts are churning due to lack of SAML SSO.
           
           {hasRun && (
             <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center animate-[fadeIn_0.3s_ease-out]">
-              <span className="text-xs text-green-600 font-mono font-bold">✓ Generated successfully</span>
+              <span className="text-xs text-green-600 font-mono font-bold">✓ Draft ready</span>
               <button className="bg-brand-blue text-white px-4 md:px-5 py-2 md:py-2.5 rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm hover:bg-blue-700 transition-colors focus:ring-2 focus:ring-brand-blue focus:ring-offset-2 outline-none">
-                Save to Workspace <ArrowRight className="w-4 h-4" />
+                Send Now <ArrowRight className="w-4 h-4" />
               </button>
             </div>
           )}
@@ -71,10 +67,10 @@ Enterprise accounts are churning due to lack of SAML SSO.
           </div>
           <h2 className="font-heading text-fluid-2 leading-[0.9] tracking-tighter text-gray-900 mb-8">
             One Click. <br/>
-            <span className="text-gray-300 text-stroke">Execution Ready.</span>
+            <span className="text-gray-300 text-stroke">Reminder Sent.</span>
           </h2>
           <p className="text-lg md:text-xl text-gray-600 font-medium mb-8">
-            Stop writing boilerplate. Once a decision is made, AI instantly generates your Decision Memo and PRD—complete with evidence citations.
+            Stop writing the same emails over and over. AI drafts personalized reminders in your voice — friendly, firm, or somewhere in between — with embedded 1-click payment links.
           </p>
         </div>
 

@@ -32,10 +32,10 @@ export const ChaosSection = () => {
   }, []);
 
   const problems = [
-    { num: "01", title: "Scattered Signals", desc: "Support, feedback, and analytics live in silos." },
-    { num: "02", title: "Volume > Value", desc: "500 free users drown out your $500k enterprise deal." },
-    { num: "03", title: "No Paper Trail", desc: "The logic gets lost in Zoom. Evidence is gone." },
-    { num: "04", title: "Manual Brutality", desc: "Writing PRDs and Jira epics steals strategic time." }
+    { num: "01", title: "Awkward Follow-ups", desc: "You did the work, but asking for payment feels uncomfortable." },
+    { num: "02", title: "Inconsistent Tracking", desc: "Invoices scattered across emails, spreadsheets, and tools." },
+    { num: "03", title: "No Paper Trail", desc: "Clients ghost you, and you have no record of reminders sent." },
+    { num: "04", title: "Manual Brutality", desc: "Writing the same follow-up emails over and over steals your time." }
   ];
 
   return (
@@ -48,11 +48,11 @@ export const ChaosSection = () => {
             <span className="w-8 h-[2px] bg-brand-blue"></span> The Chaos
           </div>
           <h2 className="font-heading text-fluid-2 leading-[0.9] tracking-tighter text-gray-900 mb-8">
-            Data <br/><span className="text-gray-400">Everywhere.</span><br/>
-            Clarity <br/><span className="text-gray-300 text-stroke">Nowhere.</span>
+            Invoices <br/><span className="text-gray-400">Everywhere.</span><br/>
+            Payment <br/><span className="text-gray-300 text-stroke">Nowhere.</span>
           </h2>
           <p className="text-lg md:text-xl text-gray-600 max-w-md font-medium">
-            Without account context, noise looks exactly like signal. You are building features for the loudest voices, not the highest value.
+            Without a system, overdue invoices pile up. You're too busy doing great work to chase payments — and that's exactly why they slip through.
           </p>
         </div>
 

@@ -28,23 +28,23 @@ export const HeroSection = () => {
           <h1 className="font-heading text-4xl sm:text-6xl md:text-7xl lg:text-[5.5rem] leading-[1.1] sm:leading-none tracking-tighter font-black text-gray-900 m-0 p-0 relative z-20 w-full">
             <span className="block overflow-hidden pb-1 sm:pb-2">
               <span className={`block transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${isVisible ? 'translate-y-0' : 'translate-y-[120%]'}`}>
-                Know what to
+                Get paid for
               </span>
             </span>
             <span className="block overflow-hidden pb-2 sm:pb-4">
               <span className={`block text-brand-blue transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] delay-75 ${isVisible ? 'translate-y-0' : 'translate-y-[120%]'}`}>
-                build next —
+                work you've
               </span>
             </span>
             <span className="block overflow-hidden pb-2 sm:pb-4">
               <span className={`block text-gray-900 transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] delay-150 ${isVisible ? 'translate-y-0' : 'translate-y-[120%]'}`}>
-                and prove it worked.
+                already done.
               </span>
             </span>
           </h1>
           
           <p className={`mt-6 md:mt-8 text-lg md:text-xl lg:text-2xl text-gray-500 font-medium max-w-3xl px-4 sm:px-0 transition-all duration-700 delay-200 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
-            ASTRIX AI is your ‘Cursor for product decisions’: a calm workspace that connects signals, problems, opportunities, decisions, launches, and final verdicts.
+            ASTRIX AI is your autonomous revenue recovery agent: a calm workspace that tracks invoices, clones your voice, sends reminders, and gets you paid — on autopilot.
           </p>
         </div>
 
@@ -60,7 +60,7 @@ export const HeroSection = () => {
               <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-gray-300"></div>
               <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-gray-300"></div>
               <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-gray-300"></div>
-              <div className="mx-auto font-mono text-[10px] md:text-xs text-gray-400 font-bold tracking-widest uppercase hidden md:block">Astrix Workspace</div>
+              <div className="mx-auto font-mono text-[10px] md:text-xs text-gray-400 font-bold tracking-widest uppercase hidden md:block">Astrix Dashboard</div>
             </div>
 
             {/* Application Body */}
@@ -93,30 +93,30 @@ export const HeroSection = () => {
                     </div>
                     <div>
                       <div className="text-white font-bold text-sm md:text-base flex items-center gap-2">
-                        Clustered Problem <span className="flex h-2 w-2 relative"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-yellow opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-brand-yellow"></span></span>
+                        Reminder Sent <span className="flex h-2 w-2 relative"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-yellow opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-brand-yellow"></span></span>
                       </div>
-                      <div className="text-gray-400 font-mono text-[10px] md:text-xs mt-1">Found 84 signals indicating Onboarding friction.</div>
+                      <div className="text-gray-400 font-mono text-[10px] md:text-xs mt-1">AI sent a friendly nudge to Acme Corp for Invoice #1042.</div>
                     </div>
                   </div>
                   
                   <div className="bg-white/10 border border-white/10 px-4 py-2 rounded-lg relative z-10 w-full md:w-auto flex justify-between md:block mt-2 md:mt-0">
-                    <span className="text-gray-400 text-xs md:text-sm mr-2">ARR at Risk:</span>
-                    <span className="text-brand-yellow font-bold text-sm md:text-base">$1.2M</span>
+                    <span className="text-gray-400 text-xs md:text-sm mr-2">Invoice Amount:</span>
+                    <span className="text-brand-yellow font-bold text-sm md:text-base">$2,400</span>
                   </div>
                 </div>
 
                 {/* Metrics Grid */}
                 <div className="flex flex-col sm:flex-row gap-4 flex-1 preserve-3d">
                   <div className="flex-1 bg-white rounded-xl md:rounded-2xl p-5 md:p-6 border border-gray-200 transform md:translate-z-30 shadow-sm flex flex-col justify-center relative overflow-hidden">
-                    <div className="text-gray-500 font-mono text-[10px] md:text-xs font-bold uppercase mb-2">Opportunity Score</div>
-                    <div className="text-4xl md:text-6xl font-heading font-black text-brand-blue tracking-tighter">92</div>
-                    <div className="absolute bottom-0 left-0 w-full h-1 bg-gray-100"><div className="h-full bg-brand-blue w-[92%]"></div></div>
+                    <div className="text-gray-500 font-mono text-[10px] md:text-xs font-bold uppercase mb-2">Recovery Rate</div>
+                    <div className="text-4xl md:text-6xl font-heading font-black text-brand-blue tracking-tighter">94%</div>
+                    <div className="absolute bottom-0 left-0 w-full h-1 bg-gray-100"><div className="h-full bg-brand-blue w-[94%]"></div></div>
                   </div>
                   
                   <div className="flex-1 bg-white rounded-xl md:rounded-2xl p-5 md:p-6 border border-gray-200 transform md:translate-z-20 shadow-sm flex flex-col justify-center">
-                    <div className="text-gray-500 font-mono text-[10px] md:text-xs font-bold uppercase mb-2">Signals Clustered</div>
-                    <div className="text-4xl md:text-6xl font-heading font-black text-gray-900 tracking-tighter">14.2k</div>
-                    <div className="text-green-500 text-xs font-bold mt-2 flex items-center gap-1"><Activity className="w-3 h-3" /> +12% this week</div>
+                    <div className="text-gray-500 font-mono text-[10px] md:text-xs font-bold uppercase mb-2">Total Recovered</div>
+                    <div className="text-4xl md:text-6xl font-heading font-black text-gray-900 tracking-tighter">$47.2k</div>
+                    <div className="text-green-500 text-xs font-bold mt-2 flex items-center gap-1"><Activity className="w-3 h-3" /> +$3.2k this week</div>
                   </div>
                 </div>
 
@@ -125,10 +125,10 @@ export const HeroSection = () => {
 
             {/* Floating Badges (Outside the window) */}
             <div className="absolute -right-2 md:-right-8 top-1/4 bg-white border border-gray-200 text-gray-900 px-3 md:px-4 py-2 md:py-2.5 rounded-xl font-mono text-[10px] md:text-xs font-bold shadow-xl transform translate-z-50 animate-float flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-brand-blue animate-pulse"></div> Generating PRD...
+              <div className="w-2 h-2 rounded-full bg-brand-blue animate-pulse"></div> Sending reminder...
             </div>
             <div className="absolute -left-2 md:-left-6 bottom-1/4 bg-gray-900 text-white border border-gray-700 px-3 md:px-4 py-2 md:py-2.5 rounded-xl font-mono text-[10px] md:text-xs font-bold shadow-xl transform translate-z-50 animate-float flex items-center gap-2" style={{ animationDelay: '1s' }}>
-              ✓ Decision Logged
+              ✓ Invoice Paid
             </div>
 
           </div>
@@ -148,7 +148,7 @@ export const HeroSection = () => {
               </a>
             </MagneticButton>
           </div>
-          <span className="text-xs md:text-sm text-gray-400 font-medium mt-6 text-center">Every decision traced back to real customer signals.</span>
+          <span className="text-xs md:text-sm text-gray-400 font-medium mt-6 text-center">First 3 successful recoveries are free. No credit card required.</span>
         </div>
 
       </div>

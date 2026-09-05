@@ -34,13 +34,13 @@ export const Home = () => {
       {/* 1. Hero */}
       <HeroSection />
       
-      {/* 2. Problem Section: Scattered signals, weak prioritization */}
+      {/* 2. Problem Section: Unpaid invoices, awkward follow-ups */}
       <ChaosSection />
       
-      {/* 3. How it works: 6-step core loop */}
+      {/* 3. How it works: 6-step recovery loop */}
       <ClaritySection />
       
-      {/* 4. Why different: Account impact & Evidence */}
+      {/* 4. Why different: AI tone & Smart recovery */}
       <VolumeValueSection />
       
       {/* 5. Product Preview: The Core Loop in Action */}

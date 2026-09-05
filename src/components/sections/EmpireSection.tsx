@@ -31,11 +31,11 @@ export const EmpireSection = () => {
         </div>
 
         <h2 className={`font-heading text-fluid-2 leading-[0.9] tracking-tighter mb-8 md:mb-10 transition-all duration-700 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
-          Your next decision <br/> <span className="text-gray-300 text-stroke">deserves proof.</span>
+          Your unpaid invoices <br/> <span className="text-gray-300 text-stroke">deserve attention.</span>
         </h2>
         
         <p className={`text-lg md:text-xl text-gray-500 font-medium max-w-2xl mb-12 md:mb-16 transition-all duration-700 delay-100 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
-          The era of guessing is over. Join the product teams building with evidence. Setup takes under 10 minutes.
+          The era of awkward follow-ups is over. Join freelancers who get paid on autopilot. Setup takes under 5 minutes.
         </p>
 
         <div className={`flex flex-col sm:flex-row gap-4 md:gap-6 mb-24 md:mb-32 w-full sm:w-auto transition-all duration-700 delay-150 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
@@ -65,7 +65,7 @@ export const EmpireSection = () => {
               <div className="font-heading text-xl font-black tracking-tighter text-gray-900">ASTRIX</div>
             </Link>
             <p className="text-gray-500 text-sm font-medium max-w-xs mb-8 leading-relaxed">
-              The Accountability Layer for Product Teams. Stop guessing, start proving.
+              The Autonomous Revenue Recovery Agent for Freelancers. Stop chasing, start recovering.
             </p>
             <div className="font-sans text-xs text-gray-400 font-medium">
               © 2026 Astrix AI Inc. All rights reserved.

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { AuthLayout } from '../layouts/AuthLayout';
-import { ShieldCheck, Loader2, AlertCircle, Sparkles } from 'lucide-react';
+import { Loader2, AlertCircle, Sparkles } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 export const Signup = () => {
@@ -56,14 +56,14 @@ export const Signup = () => {
             <Sparkles className="w-5 h-5 shrink-0 mt-0.5" />
             <div>
               <strong className="block mb-1 text-gray-900">Welcome to your interactive demo!</strong>
-              The Free plan gives you full access to explore the platform. Create an account to get started.
+              The Free plan gives you 3 successful recoveries. Create an account to get started.
             </div>
           </div>
         )}
 
         <div className="text-center mb-8">
-          <h1 className="font-heading text-3xl font-bold text-gray-900 mb-2 tracking-tight">Start building smarter.</h1>
-          <p className="text-gray-500 text-sm font-medium">Start for free. No credit card required.</p>
+          <h1 className="font-heading text-3xl font-bold text-gray-900 mb-2 tracking-tight">Start recovering today.</h1>
+          <p className="text-gray-500 text-sm font-medium">First 3 recoveries are free. No credit card required.</p>
         </div>
 
         <button 
@@ -113,7 +113,7 @@ export const Signup = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-bold text-gray-900 mb-1.5" htmlFor="email">Work Email</label>
+              <label className="block text-sm font-bold text-gray-900 mb-1.5" htmlFor="email">Email Address</label>
               <input 
                 type="email" 
                 id="email"
