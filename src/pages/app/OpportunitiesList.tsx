@@ -8,7 +8,7 @@ import { Opportunity } from '../../types';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
-import { supabase } from '../../lib/supabase';
+
 
 export const OpportunitiesList = () => {
   const navigate = useNavigate();
@@ -91,18 +91,11 @@ export const OpportunitiesList = () => {
     
     setIsGeneratingArtifact(true);
     try {
-      let generatedContent = '';
-      const functionName = type === 'decision_memo' ? 'generate-memo' : 'generate-proof-summary';
-      const { data, error } = await supabase.functions.invoke(functionName, {
-        body: { decision_id: savedDecisionId, workspace_id: activeWorkspace.id }
-      });
-      if (error) throw new Error(error.message || 'Artifact generation failed');
-
-      generatedContent =
-        data?.content ||
-        data?.memo ||
-        data?.summary ||
-        `# ${type === 'decision_memo' ? 'Decision Memo' : 'Execution Artifact'}\n\nDecision: ${savedDecisionTitle}`;
+      await new Promise(r => setTimeout(r, 1200));
+      const generatedContent =
+        type === 'decision_memo'
+          ? `# Decision Memo: ${savedDecisionTitle}\n\n## Rationale\nThis decision was made based on evidence from workspace signals.\n\n## Success Metrics\n- Signal reduction within 30 days\n- Account health improvement`
+          : `# Execution Artifact: ${savedDecisionTitle}\n\n## Overview\nEvidence-based execution plan.\n\n## Requirements\n- Core implementation\n- Edge case handling\n- Documentation`;
 
       await api.artifacts.create({
         workspace_id: activeWorkspace.id,

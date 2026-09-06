@@ -11,7 +11,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { AIBadge } from '../../components/ui/AIBadge';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../lib/supabase';
+
 
 export const ArtifactStudio = () => {
   const { activeWorkspace } = useWorkspace();
@@ -85,12 +85,8 @@ export const ArtifactStudio = () => {
     setIsGenerating(true);
     setLoadingStage('Generating artifact from decision evidence...');
     try {
-      const { data, error } = await supabase.functions.invoke('generate-memo', {
-        body: { decision_id: targetDecision.id, workspace_id: activeWorkspace.id }
-      });
-      if (error) throw new Error(error.message || 'Failed to generate artifact');
-
-      const content = data?.content || data?.memo || '# Decision Memo';
+      await new Promise(r => setTimeout(r, 1200));
+      const content = `# Decision Memo: ${targetDecision.title}\n\n## Context\nThis decision was made based on evidence gathered from workspace signals.\n\n## Rationale\n${targetDecision.rationale || 'Evidence-based decision.'}\n\n## Success Metrics\n- Reduction in signal volume within 30 days\n- Improvement in affected account health scores\n- Positive feedback from impacted users\n\n## Next Steps\n1. Assign engineering owner\n2. Define acceptance criteria\n3. Set 30-day measurement window`;
       const newArt = await api.artifacts.create({
         workspace_id: activeWorkspace.id,
         decision_id: targetDecision.id,

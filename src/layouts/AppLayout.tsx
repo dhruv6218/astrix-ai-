@@ -3,7 +3,9 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, FileText, Bot, Settings, LogOut, 
   Bell, Menu, X, ChevronDown, Check, Plus, Lock,
-  CreditCard, Sparkles, Search, Zap, Activity
+  CreditCard, Sparkles, Search, Zap, Activity,
+  Radio, Target, GitCompare, CheckCircle2, FileCode2,
+  Rocket, Building2, MessageCircle
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
@@ -53,14 +55,36 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, title, subtitle,
     navigate('/pricing');
   };
 
-  // Revenue Recovery Navigation
-  const navItems = [
-    { name: 'Dashboard', path: '/app', icon: LayoutDashboard, desc: 'Overview & metrics' },
-    { name: 'Invoices', path: '/app/invoices', icon: FileText, desc: 'Action center' },
-    { name: 'Tone Studio', path: '/app/tone', icon: Bot, desc: 'AI voice cloning', pro: false },
-    { name: 'Gateways', path: '/app/gateways', icon: CreditCard, desc: 'Payment connections' },
-    { name: 'Analytics', path: '/app/analytics', icon: Activity, desc: 'Recovery reports' },
-    { name: 'Settings', path: '/app/settings', icon: Settings, desc: 'Account & billing' },
+  const navSections = [
+    {
+      label: 'Recovery',
+      items: [
+        { name: 'Dashboard', path: '/app', icon: LayoutDashboard, desc: 'Overview & metrics' },
+        { name: 'Invoices', path: '/app/invoices', icon: FileText, desc: 'Action center' },
+        { name: 'Tone Studio', path: '/app/tone', icon: Bot, desc: 'AI voice cloning', pro: false },
+        { name: 'Gateways', path: '/app/gateways', icon: CreditCard, desc: 'Payment connections' },
+        { name: 'Analytics', path: '/app/analytics', icon: Activity, desc: 'Recovery reports' },
+      ],
+    },
+    {
+      label: 'Intelligence',
+      items: [
+        { name: 'Signals', path: '/app/signals', icon: Radio, desc: 'Raw feedback feed' },
+        { name: 'Problems', path: '/app/problems', icon: Target, desc: 'AI-clustered problems' },
+        { name: 'Opportunities', path: '/app/opportunities', icon: GitCompare, desc: 'Ranked & scored' },
+        { name: 'Decisions', path: '/app/decisions', icon: CheckCircle2, desc: 'Decision history' },
+        { name: 'Artifacts', path: '/app/artifacts', icon: FileCode2, desc: 'PRD & memo studio' },
+        { name: 'Launches', path: '/app/launches', icon: Rocket, desc: 'Post-launch tracking' },
+      ],
+    },
+    {
+      label: 'Workspace',
+      items: [
+        { name: 'Accounts', path: '/app/accounts', icon: Building2, desc: 'CRM context layer' },
+        { name: 'Ask AI', path: '/app/ask', icon: MessageCircle, desc: 'Query your data' },
+        { name: 'Settings', path: '/app/settings', icon: Settings, desc: 'Account & billing' },
+      ],
+    },
   ];
 
   const fullName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
@@ -147,32 +171,39 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, title, subtitle,
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-1 hide-scrollbar">
-          {navItems.map((item) => {
-            const isActive = location.pathname === item.path || (item.path !== '/app' && location.pathname.startsWith(item.path));
-            return (
-              <Link
-                key={item.name}
-                to={item.path}
-                className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-astrix-teal group ${
-                  isActive 
-                    ? 'bg-astrix-teal text-white shadow-md' 
-                    : 'text-slate-400 hover:bg-sidebar-hover hover:text-white'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <item.icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-white'}`} />
-                  <div>
-                    <div className="font-bold leading-tight">{item.name}</div>
-                    <div className={`text-[10px] leading-tight ${isActive ? 'text-teal-100' : 'text-slate-500'}`}>{item.desc}</div>
-                  </div>
-                </div>
-                {item.pro && (
-                  <span className="bg-gradient-to-r from-astrix-teal to-blue-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider shadow-sm">PRO</span>
-                )}
-              </Link>
-            );
-          })}
+        <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-3 hide-scrollbar">
+          {navSections.map((section) => (
+            <div key={section.label}>
+              <div className="text-[9px] font-mono text-slate-600 uppercase tracking-widest font-bold px-3 mb-1 mt-2">{section.label}</div>
+              <div className="space-y-0.5">
+                {section.items.map((item) => {
+                  const isActive = location.pathname === item.path || (item.path !== '/app' && location.pathname.startsWith(item.path));
+                  return (
+                    <Link
+                      key={item.name}
+                      to={item.path}
+                      className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-astrix-teal group ${
+                        isActive 
+                          ? 'bg-astrix-teal text-white shadow-md' 
+                          : 'text-slate-400 hover:bg-sidebar-hover hover:text-white'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <item.icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-white'}`} />
+                        <div>
+                          <div className="font-bold leading-tight text-[13px]">{item.name}</div>
+                          <div className={`text-[10px] leading-tight ${isActive ? 'text-teal-100' : 'text-slate-500'}`}>{item.desc}</div>
+                        </div>
+                      </div>
+                      {item.pro && (
+                        <span className="bg-gradient-to-r from-astrix-teal to-blue-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider shadow-sm">PRO</span>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
         {/* Upgrade Banner */}

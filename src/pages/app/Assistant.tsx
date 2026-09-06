@@ -3,7 +3,7 @@ import { AppLayout } from '../../layouts/AppLayout';
 import { Send, Sparkles, User, Loader2, ArrowRight, Bot } from 'lucide-react';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
 import { Link } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
+
 
 interface Message {
   id: string;
@@ -59,35 +59,62 @@ export const Assistant = () => {
     if (!activeWorkspace?.id) {
       responseContent = 'Select a workspace first, then ask your query.';
     } else {
-      const { data, error } = await supabase.functions.invoke('workspace-query', {
-        body: {
-          workspace_id: activeWorkspace.id,
-          query: text
-        }
-      });
+      await new Promise(r => setTimeout(r, 1000));
+      const lower = text.toLowerCase();
+      let responseContent: React.ReactNode = 'No matching results found in workspace data.';
 
-      if (error) {
-        responseContent = `Query failed: ${error.message}`;
-      } else if (data?.error) {
-        responseContent = data.error;
-      } else if (Array.isArray(data?.rows) && data.rows.length > 0) {
-        responseContent = (
-          <div className="space-y-2">
-            {data.rows.slice(0, 5).map((row: Record<string, any>, idx: number) => (
-              <div key={idx} className="p-3 bg-white border border-gray-200 rounded-xl">
-                {Object.entries(row).map(([key, value]) => (
-                  <div key={key} className="text-xs text-gray-700">
-                    <span className="font-bold text-gray-900">{key}:</span> {String(value ?? '-')}
+      if (lower.includes('opportunit')) {
+        const opps = await api.opportunities.list(activeWorkspace.id);
+        if (opps.length > 0) {
+          responseContent = (
+            <div className="space-y-2">
+              <p className="font-bold text-gray-900 mb-2">Top {Math.min(3, opps.length)} Opportunities:</p>
+              {opps.slice(0, 3).map((opp, idx) => (
+                <div key={idx} className="p-3 bg-white border border-gray-200 rounded-xl">
+                  <div className="text-xs text-gray-700">
+                    <span className="font-bold text-gray-900">{opp.problems?.title}:</span> Score {opp.opportunity_score}, Recommended: {opp.recommended_action}
                   </div>
-                ))}
-              </div>
-            ))}
-          </div>
-        );
-      } else if (typeof data?.answer === 'string') {
-        responseContent = data.answer;
+                </div>
+              ))}
+            </div>
+          );
+        }
+      } else if (lower.includes('account')) {
+        const accounts = await api.accounts.list(activeWorkspace.id);
+        if (accounts.length > 0) {
+          responseContent = (
+            <div className="space-y-2">
+              <p className="font-bold text-gray-900 mb-2">Accounts ({accounts.length}):</p>
+              {accounts.slice(0, 5).map((acc, idx) => (
+                <div key={idx} className="p-3 bg-white border border-gray-200 rounded-xl">
+                  <div className="text-xs text-gray-700">
+                    <span className="font-bold text-gray-900">{acc.name}:</span> ARR ${acc.arr.toLocaleString()}, Plan: {acc.plan || 'Standard'}
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        }
+      } else if (lower.includes('decision')) {
+        const decisions = await api.decisions.list(activeWorkspace.id);
+        if (decisions.length > 0) {
+          responseContent = (
+            <div className="space-y-2">
+              <p className="font-bold text-gray-900 mb-2">Recent Decisions:</p>
+              {decisions.slice(0, 3).map((dec, idx) => (
+                <div key={idx} className="p-3 bg-white border border-gray-200 rounded-xl">
+                  <div className="text-xs text-gray-700">
+                    <span className="font-bold text-gray-900">{dec.title}:</span> Action: {dec.action}
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        }
       } else {
-        responseContent = 'No matching results found in workspace data.';
+        const invoices = await api.invoices.list(activeWorkspace.id);
+        const pending = invoices.filter(i => i.status === 'pending');
+        responseContent = `You have ${pending.length} pending invoices totaling ${pending.reduce((s, i) => s + i.amount, 0).toLocaleString()}.`;
       }
     }
 

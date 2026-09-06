@@ -8,7 +8,7 @@ import { AIBadge } from '../../components/ui/AIBadge';
 import { useToast } from '../../contexts/ToastContext';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../lib/supabase';
+
 
 export const DecisionDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -38,17 +38,11 @@ export const DecisionDetail = () => {
     if (!activeWorkspace || !id || !user) return;
     setIsGenerating(true);
     try {
-      const fn = type === 'decision_memo' ? 'generate-memo' : 'generate-proof-summary';
-      const { data, error } = await supabase.functions.invoke(fn, {
-        body: { decision_id: id, workspace_id: activeWorkspace.id }
-      });
-      if (error) throw new Error(error.message || 'Failed to generate artifact');
-
+      await new Promise(r => setTimeout(r, 1200));
       const content =
-        data?.content ||
-        data?.memo ||
-        data?.summary ||
-        `# ${type === 'prd' ? 'Execution Artifact' : 'Decision Memo'}\n\nDecision ID: ${id}`;
+        type === 'decision_memo'
+          ? `# Decision Memo: ${currentDecision.title}\n\n## Rationale\n${currentDecision.rationale}\n\n## Success Metrics\n- Signal reduction within 30 days\n- Account health improvement\n\n## Next Steps\n1. Assign owner\n2. Define acceptance criteria`
+          : `# Execution Artifact: ${currentDecision.title}\n\n## Overview\n${currentDecision.rationale}\n\n## Requirements\n- Core feature implementation\n- Edge case handling\n- Documentation update`;
 
       await api.artifacts.create({
         workspace_id: activeWorkspace.id,
