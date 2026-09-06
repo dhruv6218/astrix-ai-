@@ -34,28 +34,6 @@ import { Dashboard } from './pages/app/Dashboard';
 import { Analytics } from './pages/app/Analytics';
 import { Settings } from './pages/app/Settings';
 
-// Redirect stubs
-import { Invoices } from './pages/app/Invoices';
-import { ToneStudio } from './pages/app/ToneStudio';
-import { Gateways } from './pages/app/Gateways';
-
-// App Pages — Intelligence Workspaces
-import { SignalExplorer } from './pages/app/SignalExplorer';
-import { ProblemsList } from './pages/app/ProblemsList';
-import { ProblemDetail } from './pages/app/ProblemDetail';
-import { EvidenceView } from './pages/app/EvidenceView';
-import { OpportunitiesList } from './pages/app/OpportunitiesList';
-import { OpportunityDetail } from './pages/app/OpportunityDetail';
-import { DecisionsHistory } from './pages/app/DecisionsHistory';
-import { DecisionDetail } from './pages/app/DecisionDetail';
-import { ArtifactStudio } from './pages/app/ArtifactStudio';
-import { ArtifactDetail } from './pages/app/ArtifactDetail';
-import { PostLaunchTracker } from './pages/app/PostLaunchTracker';
-import { LaunchDetail } from './pages/app/LaunchDetail';
-import { AccountsList } from './pages/app/AccountsList';
-import { AccountDetail } from './pages/app/AccountDetail';
-import { Assistant } from './pages/app/Assistant';
-
 // Admin
 import { AdminRoute } from './pages/admin/AdminRoute';
 
@@ -94,28 +72,11 @@ function App() {
               {/* App */}
               <Route path="/app" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/app/dashboard" element={<Navigate to="/app" replace />} />
-              <Route path="/app/invoices" element={<ProtectedRoute><Invoices /></ProtectedRoute>} />
-              <Route path="/app/tone" element={<ProtectedRoute><ToneStudio /></ProtectedRoute>} />
-              <Route path="/app/gateways" element={<ProtectedRoute><Gateways /></ProtectedRoute>} />
+              <Route path="/app/invoices" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/app/tone" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/app/gateways" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/app/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
               <Route path="/app/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-
-              {/* App — Intelligence Workspaces */}
-              <Route path="/app/signals" element={<ProtectedRoute><SignalExplorer /></ProtectedRoute>} />
-              <Route path="/app/problems" element={<ProtectedRoute><ProblemsList /></ProtectedRoute>} />
-              <Route path="/app/problems/:id" element={<ProtectedRoute><ProblemDetail /></ProtectedRoute>} />
-              <Route path="/app/evidence/:problemId" element={<ProtectedRoute><EvidenceView /></ProtectedRoute>} />
-              <Route path="/app/opportunities" element={<ProtectedRoute><OpportunitiesList /></ProtectedRoute>} />
-              <Route path="/app/opportunities/:id" element={<ProtectedRoute><OpportunityDetail /></ProtectedRoute>} />
-              <Route path="/app/decisions" element={<ProtectedRoute><DecisionsHistory /></ProtectedRoute>} />
-              <Route path="/app/decisions/:id" element={<ProtectedRoute><DecisionDetail /></ProtectedRoute>} />
-              <Route path="/app/artifacts" element={<ProtectedRoute><ArtifactStudio /></ProtectedRoute>} />
-              <Route path="/app/artifacts/:id" element={<ProtectedRoute><ArtifactDetail /></ProtectedRoute>} />
-              <Route path="/app/launches" element={<ProtectedRoute><PostLaunchTracker /></ProtectedRoute>} />
-              <Route path="/app/launches/:id" element={<ProtectedRoute><LaunchDetail /></ProtectedRoute>} />
-              <Route path="/app/accounts" element={<ProtectedRoute><AccountsList /></ProtectedRoute>} />
-              <Route path="/app/accounts/:id" element={<ProtectedRoute><AccountDetail /></ProtectedRoute>} />
-              <Route path="/app/ask" element={<ProtectedRoute><Assistant /></ProtectedRoute>} />
 
               {/* Admin */}
               <Route path="/admin" element={<AdminRoute />} />

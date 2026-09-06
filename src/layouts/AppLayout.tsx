@@ -4,8 +4,7 @@ import {
   LayoutDashboard, FileText, Bot, Settings, LogOut, 
   Bell, Menu, X, ChevronDown, Check, Plus, Lock,
   CreditCard, Sparkles, Search, Zap, Activity,
-  Radio, Target, GitCompare, CheckCircle2, FileCode2,
-  Rocket, Building2, MessageCircle
+  
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
@@ -67,21 +66,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, title, subtitle,
       ],
     },
     {
-      label: 'Intelligence',
-      items: [
-        { name: 'Signals', path: '/app/signals', icon: Radio, desc: 'Raw feedback feed' },
-        { name: 'Problems', path: '/app/problems', icon: Target, desc: 'AI-clustered problems' },
-        { name: 'Opportunities', path: '/app/opportunities', icon: GitCompare, desc: 'Ranked & scored' },
-        { name: 'Decisions', path: '/app/decisions', icon: CheckCircle2, desc: 'Decision history' },
-        { name: 'Artifacts', path: '/app/artifacts', icon: FileCode2, desc: 'PRD & memo studio' },
-        { name: 'Launches', path: '/app/launches', icon: Rocket, desc: 'Post-launch tracking' },
-      ],
-    },
-    {
       label: 'Workspace',
       items: [
-        { name: 'Accounts', path: '/app/accounts', icon: Building2, desc: 'CRM context layer' },
-        { name: 'Ask AI', path: '/app/ask', icon: MessageCircle, desc: 'Query your data' },
         { name: 'Settings', path: '/app/settings', icon: Settings, desc: 'Account & billing' },
       ],
     },

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { HeroSection } from '../components/sections/HeroSection';
 import { ChaosSection } from '../components/sections/ChaosSection';
@@ -7,8 +7,6 @@ import { VolumeValueSection } from '../components/sections/VolumeValueSection';
 import { SignalExplorerSection } from '../components/sections/SignalExplorerSection';
 import { EvidenceViewSection } from '../components/sections/EvidenceViewSection';
 import { EngineSection } from '../components/sections/EngineSection';
-import { DecisionLabSection } from '../components/sections/DecisionLabSection';
-import { ArtifactSection } from '../components/sections/ArtifactSection';
 import { PostLaunchSection } from '../components/sections/PostLaunchSection';
 import { MainLayout } from '../layouts/MainLayout';
 
@@ -47,8 +45,6 @@ export const Home = () => {
       <SignalExplorerSection />
       <EvidenceViewSection />
       <EngineSection />
-      <DecisionLabSection />
-      <ArtifactSection />
       <PostLaunchSection />
       
       {/* Final CTA is handled by EmpireSection inside MainLayout */}

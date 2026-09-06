@@ -7,7 +7,7 @@ import {
   ArrowRight, Mail, Clock, BarChart3, FileText,
   Settings, ChevronRight, Plus
 } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { Skeleton } from '../../components/ui/Skeleton';
@@ -75,8 +75,10 @@ export const Dashboard = () => {
   const { user } = useAuth();
   const { addToast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
+  const routeTab: TabId = location.pathname.endsWith('/invoices') ? 'invoices' : location.pathname.endsWith('/tone') ? 'tone' : location.pathname.endsWith('/settings') || location.pathname.endsWith('/gateways') ? 'settings' : 'overview';
   
-  const [activeTab, setActiveTab] = useState<TabId>('overview');
+  const [activeTab, setActiveTab] = useState<TabId>(routeTab);
   const [isLoading, setIsLoading] = useState(true);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [activities, setActivities] = useState<ActivityItem[]>([]);
@@ -92,6 +94,10 @@ export const Dashboard = () => {
   const [invoiceFilter, setInvoiceFilter] = useState<'all' | 'pending' | 'paused' | 'paid'>('all');
 
   const firstName = user?.user_metadata?.full_name?.split(' ')[0] || 'there';
+
+  useEffect(() => {
+    setActiveTab(routeTab);
+  }, [routeTab]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -190,7 +196,10 @@ export const Dashboard = () => {
         {tabs.map(tab => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => {
+              setActiveTab(tab.id);
+              navigate(tab.id === 'overview' ? '/app' : `/app/${tab.id === 'invoices' ? 'invoices' : tab.id}`);
+            }}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap flex-1 justify-center ${
               activeTab === tab.id 
                 ? 'bg-gray-900 text-white shadow-sm' 
