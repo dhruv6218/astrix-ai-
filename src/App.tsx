@@ -32,7 +32,6 @@ import { Step3Results } from './pages/onboarding/Step3Results';
 
 // App Pages — Core
 import { Dashboard } from './pages/app/Dashboard';
-import { Analytics } from './pages/app/Analytics';
 import { Settings } from './pages/app/Settings';
 
 // Admin
@@ -77,7 +76,7 @@ function App() {
               <Route path="/app/invoices" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/app/tone" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/app/gateways" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-              <Route path="/app/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
+              <Route path="/app/analytics" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/app/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 
               {/* Admin */}

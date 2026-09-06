@@ -1,805 +1,113 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { AppLayout } from '../../layouts/AppLayout';
-import { 
-  TrendingUp, DollarSign, AlertCircle, Zap, Activity,
-  Send, Bot, UploadCloud, CreditCard, RefreshCw, WifiOff,
-  Sparkles, Play, Pause, Eye, CheckCircle2,
-  ArrowRight, Mail, Clock, BarChart3, FileText,
-  Settings, ChevronRight, Plus
-} from 'lucide-react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { Skeleton } from '../../components/ui/Skeleton';
-import { AIBadge } from '../../components/ui/AIBadge';
+import {
+  Activity, AlertCircle, ArrowDownRight, ArrowUpRight, BarChart3, Bell, Bot, Check,
+  CheckCircle2, ChevronRight, Clock3, CreditCard, DollarSign, Download, FileText,
+  Filter, Mail, MoreHorizontal, Pause, Play, Plus, RefreshCw, Search, Send,
+  Settings2, Sparkles, Target, TrendingUp, UploadCloud, UserPlus, WifiOff, X,
+} from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
-interface Invoice {
-  id: string;
-  client_name: string;
-  client_email: string;
-  amount: number;
-  currency: string;
-  due_date: string;
-  status: 'pending' | 'paid' | 'paused' | 'disputed';
-  days_overdue: number;
-  ai_status: 'nudge_sent' | 'escalated' | 'paid' | 'pending';
-  last_chased_at: string | null;
-  reminder_count: number;
-}
+type View = 'overview' | 'invoices' | 'tone' | 'gateways' | 'analytics' | 'settings';
+type InvoiceStatus = 'Needs attention' | 'In sequence' | 'Paid' | 'Paused';
+interface Invoice { id: string; client: string; email: string; amount: string; due: string; age: string; status: InvoiceStatus; step: string; initials: string; color: string; }
 
-interface ActivityItem {
-  id: string;
-  type: 'reminder_sent' | 'payment_received' | 'invoice_created' | 'ai_action';
-  message: string;
-  timestamp: string;
-  amount?: number;
-}
-
-interface DashboardMetrics {
-  total_recovered: number;
-  currently_outstanding: number;
-  active_chases: number;
-  recovery_rate: number;
-  pending_invoices: number;
-  this_month_recovered: number;
-}
-
-const MOCK_INVOICES: Invoice[] = [
-  { id: '1', client_name: 'Acme Corp', client_email: 'billing@acme.com', amount: 2400, currency: 'USD', due_date: '2025-01-01', status: 'pending', days_overdue: 14, ai_status: 'nudge_sent', last_chased_at: '2025-01-10', reminder_count: 2 },
-  { id: '2', client_name: 'TechStart GmbH', client_email: 'finance@techstart.de', amount: 1800, currency: 'EUR', due_date: '2024-12-28', status: 'pending', days_overdue: 18, ai_status: 'escalated', last_chased_at: '2025-01-08', reminder_count: 3 },
-  { id: '3', client_name: 'DataFlow Ltd', client_email: 'accounts@dataflow.co', amount: 890, currency: 'USD', due_date: '2025-01-05', status: 'pending', days_overdue: 10, ai_status: 'pending', last_chased_at: null, reminder_count: 0 },
-  { id: '4', client_name: 'InnovateLab', client_email: 'pay@innovatelab.com', amount: 1500, currency: 'USD', due_date: '2024-12-15', status: 'paid', days_overdue: 0, ai_status: 'paid', last_chased_at: '2024-12-20', reminder_count: 1 },
-  { id: '5', client_name: 'CloudScale Inc', client_email: 'ap@cloudscale.io', amount: 3200, currency: 'USD', due_date: '2024-12-20', status: 'paused', days_overdue: 25, ai_status: 'nudge_sent', last_chased_at: '2025-01-05', reminder_count: 2 },
+const invoices: Invoice[] = [
+  { id: 'INV-1042', client: 'Acme Corporation', email: 'billing@acme.com', amount: '$2,400', due: 'Jan 1, 2025', age: '14 days overdue', status: 'Needs attention', step: 'Nudge 2 of 3', initials: 'AC', color: 'bg-blue-100 text-blue-700' },
+  { id: 'INV-1041', client: 'TechStart GmbH', email: 'finance@techstart.de', amount: '€1,800', due: 'Dec 28, 2024', age: '18 days overdue', status: 'In sequence', step: 'Firm follow-up', initials: 'TS', color: 'bg-violet-100 text-violet-700' },
+  { id: 'INV-1040', client: 'DataFlow Ltd', email: 'accounts@dataflow.co', amount: '$890', due: 'Jan 5, 2025', age: '10 days overdue', status: 'Needs attention', step: 'Ready to send', initials: 'DF', color: 'bg-amber-100 text-amber-700' },
+  { id: 'INV-1039', client: 'InnovateLab', email: 'pay@innovatelab.com', amount: '$1,500', due: 'Dec 15, 2024', age: 'Paid Jan 10', status: 'Paid', step: 'Recovered', initials: 'IL', color: 'bg-emerald-100 text-emerald-700' },
+  { id: 'INV-1038', client: 'CloudScale Inc', email: 'ap@cloudscale.io', amount: '$3,200', due: 'Dec 20, 2024', age: '25 days overdue', status: 'Paused', step: 'Paused by you', initials: 'CS', color: 'bg-slate-100 text-slate-700' },
 ];
 
-const MOCK_ACTIVITIES: ActivityItem[] = [
-  { id: '1', type: 'reminder_sent', message: 'AI sent a friendly nudge to Acme Corp for Invoice #1042', timestamp: '2 hours ago', amount: 2400 },
-  { id: '2', type: 'payment_received', message: 'Payment received from InnovateLab — Invoice #1039 cleared', timestamp: '5 hours ago', amount: 1500 },
-  { id: '3', type: 'ai_action', message: 'AI escalated TechStart GmbH to Level 2 (Firm tone)', timestamp: '1 day ago' },
-  { id: '4', type: 'invoice_created', message: 'New invoice added for DataFlow Ltd', timestamp: '2 days ago', amount: 890 },
-  { id: '5', type: 'reminder_sent', message: 'AI sent 2nd reminder to CloudScale Inc', timestamp: '3 days ago', amount: 3200 },
+const activity = [
+  ['payment', 'Payment received from InnovateLab', 'Invoice INV-1039 cleared', '$1,500', '2h ago'],
+  ['send', 'Friendly nudge sent to Acme Corporation', 'Invoice INV-1042 · Nudge 2 of 3', '$2,400', '4h ago'],
+  ['ai', 'Astrix prepared a firm follow-up', 'TechStart GmbH · Ready for review', '', 'Yesterday'],
+  ['file', 'Invoice added to your workspace', 'DataFlow Ltd · INV-1040', '$890', 'Yesterday'],
 ];
 
-const MOCK_METRICS: DashboardMetrics = {
-  total_recovered: 47200,
-  currently_outstanding: 8290,
-  active_chases: 3,
-  recovery_rate: 94,
-  pending_invoices: 4,
-  this_month_recovered: 12400
-};
+const nav: { id: View; label: string; icon: React.ElementType; desc: string }[] = [
+  { id: 'overview', label: 'Overview', icon: BarChart3, desc: 'Your money at a glance' },
+  { id: 'invoices', label: 'Invoices', icon: FileText, desc: 'Action center' },
+  { id: 'tone', label: 'Tone Studio', icon: Bot, desc: 'Write like you' },
+  { id: 'gateways', label: 'Payment gateways', icon: CreditCard, desc: 'Get paid faster' },
+  { id: 'analytics', label: 'Analytics', icon: TrendingUp, desc: 'Recovery performance' },
+  { id: 'settings', label: 'Settings', icon: Settings2, desc: 'Workspace & account' },
+];
 
-type TabId = 'overview' | 'invoices' | 'tone' | 'settings';
+const money = (value: string) => value.replace('€', '€');
 
 export const Dashboard = () => {
   const { user } = useAuth();
   const { addToast } = useToast();
-  const navigate = useNavigate();
   const location = useLocation();
-  const routeTab: TabId = location.pathname.endsWith('/invoices') ? 'invoices' : location.pathname.endsWith('/tone') ? 'tone' : location.pathname.endsWith('/settings') || location.pathname.endsWith('/gateways') ? 'settings' : 'overview';
-  
-  const [activeTab, setActiveTab] = useState<TabId>(routeTab);
-  const [isLoading, setIsLoading] = useState(true);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [activities, setActivities] = useState<ActivityItem[]>([]);
-  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [online, setOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine);
+  const [view, setView] = useState<View>(location.pathname.includes('invoices') ? 'invoices' : location.pathname.includes('tone') ? 'tone' : location.pathname.includes('gateways') ? 'gateways' : location.pathname.includes('analytics') ? 'analytics' : location.pathname.includes('settings') ? 'settings' : 'overview');
+  const [filter, setFilter] = useState<'All' | InvoiceStatus>('All');
+  const [query, setQuery] = useState('');
+  const [tone, setTone] = useState(() => localStorage.getItem('astrix-tone') || '');
+  const [toneLevel, setToneLevel] = useState(1);
+  const [preview, setPreview] = useState('');
+  const [generating, setGenerating] = useState(false);
 
-  // Tone Studio
-  const [toneLevel, setToneLevel] = useState(2);
-  const [toneSample, setToneSample] = useState('');
-  const [generatedPreview, setGeneratedPreview] = useState('');
-  const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
-  const [isOnline, setIsOnline] = useState(() => typeof navigator === 'undefined' ? true : navigator.onLine);
-
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
-  useEffect(() => {
-    const savedTone = window.localStorage.getItem('astrix-tone-sample');
-    if (savedTone) setToneSample(savedTone);
-  }, []);
-
-  useEffect(() => {
-    window.localStorage.setItem('astrix-tone-sample', toneSample);
-  }, [toneSample]);
-
-  // Invoice filter
-  const [invoiceFilter, setInvoiceFilter] = useState<'all' | 'pending' | 'paused' | 'paid'>('all');
+  useEffect(() => { const t = window.setTimeout(() => setLoading(false), 650); return () => window.clearTimeout(t); }, []);
+  useEffect(() => { const on = () => setOnline(true); const off = () => setOnline(false); window.addEventListener('online', on); window.addEventListener('offline', off); return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); }; }, []);
+  useEffect(() => { const path = location.pathname; setView(path.includes('invoices') ? 'invoices' : path.includes('tone') ? 'tone' : path.includes('gateways') ? 'gateways' : path.includes('analytics') ? 'analytics' : path.includes('settings') ? 'settings' : 'overview'); }, [location.pathname]);
+  useEffect(() => { localStorage.setItem('astrix-tone', tone); }, [tone]);
 
   const firstName = user?.user_metadata?.full_name?.split(' ')[0] || 'there';
-
-  useEffect(() => {
-    setActiveTab(routeTab);
-  }, [routeTab]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setInvoices(MOCK_INVOICES);
-      setActivities(MOCK_ACTIVITIES);
-      setMetrics(MOCK_METRICS);
-      setIsLoading(false);
-    }, 700);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const formatCurrency = (value: number, currency = 'USD') => {
-    if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
-    if (value >= 1000) return `$${(value / 1000).toFixed(1)}k`;
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 }).format(value);
+  const filtered = useMemo(() => invoices.filter(i => (filter === 'All' || i.status === filter) && `${i.client} ${i.id} ${i.email}`.toLowerCase().includes(query.toLowerCase())), [filter, query]);
+  const go = (next: View) => { setView(next); navigate(next === 'overview' ? '/app' : `/app/${next}`); };
+  const notify = (message: string) => addToast(message, 'success');
+  const generate = () => {
+    if (!tone.trim()) return addToast('Paste a sample message first.', 'warning');
+    setGenerating(true);
+    window.setTimeout(() => {
+      const previews = [
+        'Hi Sarah,\n\nJust a quick note on invoice INV-1042 for $2,400. When you have a moment, you can take care of it here: pay.astrix.ai/1042\n\nThanks so much!\n\nBest,',
+        'Hi Sarah,\n\nFollowing up on invoice INV-1042 for $2,400, which is now 14 days past due. You can settle it securely here: pay.astrix.ai/1042\n\nPlease let me know if anything is blocking payment.\n\nBest,',
+        'Sarah,\n\nThis is a follow-up regarding invoice INV-1042 for $2,400, now 14 days overdue. Please settle the invoice within 48 hours using: pay.astrix.ai/1042\n\nRegards,'
+      ];
+      setPreview(previews[toneLevel]);
+      setGenerating(false);
+    }, 900);
   };
 
-  const handlePauseAI = (id: string) => {
-    setInvoices(prev => prev.map(inv => inv.id === id ? { ...inv, status: 'paused' as const } : inv));
-    addToast('AI paused for this invoice. You can resume anytime.', 'success');
-  };
+  if (loading) return <AppLayout title="Your recovery workspace" subtitle="Preparing your latest activity..."><div className="flex flex-col gap-6"><div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">{[1,2,3,4].map(i => <Skeleton key={i} className="h-36 rounded-2xl" />)}</div><Skeleton className="h-[420px] rounded-2xl" /></div></AppLayout>;
 
-  const handleResumeAI = (id: string) => {
-    setInvoices(prev => prev.map(inv => inv.id === id ? { ...inv, status: 'pending' as const } : inv));
-    addToast('AI resumed. Next reminder scheduled in 3 days.', 'success');
-  };
+  return <AppLayout title={view === 'overview' ? `Good morning, ${firstName}.` : nav.find(n => n.id === view)?.label || 'Workspace'} subtitle={view === 'overview' ? 'A calm view of what is owed, moving, and recovered.' : nav.find(n => n.id === view)?.desc} actions={<button onClick={() => window.dispatchEvent(new CustomEvent('open-upload-modal'))} className="flex items-center gap-2 rounded-xl bg-astrix-teal px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-astrix-darkTeal"><Plus className="h-4 w-4" /> Add invoice</button>}>
+    {!online && <div role="status" className="mb-6 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800"><WifiOff className="h-4 w-4" /> You&apos;re offline. Your workspace is safe and will sync when you reconnect.</div>}
+    <div className="mb-8 flex gap-1 overflow-x-auto rounded-2xl border border-gray-200 bg-white p-1.5 shadow-sm hide-scrollbar">{nav.map(item => <button key={item.id} onClick={() => go(item.id)} className={`flex min-w-max flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold transition ${view === item.id ? 'bg-gray-950 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-950'}`}><item.icon className="h-4 w-4" /><span className="hidden md:inline">{item.label}</span></button>)}</div>
 
-  const handleGeneratePreview = () => {
-    if (!toneSample.trim()) { addToast('Paste a sample email first.', 'warning'); return; }
-    setIsGeneratingPreview(true);
-    setTimeout(() => {
-      const previews: Record<number, string> = {
-        1: `Hey Sarah! Hope you're doing well.\n\nJust a quick heads-up — Invoice #1042 for $2,400 was due on Jan 1st. Totally understand things get busy, but wanted to make sure this didn't slip through the cracks.\n\nHere's a quick link if you'd like to sort it now: pay.astrix.ai/1042\n\nThanks so much! 😊`,
-        2: `Hi Sarah,\n\nFollowing up on Invoice #1042 ($2,400) — it's now 14 days past due.\n\nI'd appreciate if you could process this at your earliest convenience. You can pay instantly here: pay.astrix.ai/1042\n\nLet me know if there are any issues.\n\nBest,`,
-        3: `Sarah,\n\nThis is my third follow-up regarding Invoice #1042 for $2,400, now 14 days overdue.\n\nImmediate payment is required. Please use the link below to settle this today: pay.astrix.ai/1042\n\nIf payment is not received within 48 hours, I will need to consider escalation options.\n\nRegards,`,
-      };
-      setGeneratedPreview(previews[toneLevel] || previews[2]);
-      setIsGeneratingPreview(false);
-    }, 1500);
-  };
-
-  const getStatusBadge = (status: Invoice['status'], aiStatus: Invoice['ai_status']) => {
-    if (status === 'paid') return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-green-100 text-green-700 border border-green-200 whitespace-nowrap"><CheckCircle2 className="w-3 h-3" /> Paid</span>;
-    if (status === 'paused') return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-gray-100 text-gray-600 border border-gray-200 whitespace-nowrap"><Pause className="w-3 h-3" /> AI Paused</span>;
-    if (status === 'disputed') return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-orange-100 text-orange-700 border border-orange-200 whitespace-nowrap"><AlertCircle className="w-3 h-3" /> Disputed</span>;
-    switch (aiStatus) {
-      case 'nudge_sent': return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-100 text-blue-700 border border-blue-200 whitespace-nowrap"><Send className="w-3 h-3" /> Nudge Sent</span>;
-      case 'escalated': return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-purple-100 text-purple-700 border border-purple-200 whitespace-nowrap"><TrendingUp className="w-3 h-3" /> Escalated</span>;
-      default: return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-yellow-100 text-yellow-700 border border-yellow-200 whitespace-nowrap"><Clock className="w-3 h-3" /> Queued</span>;
-    }
-  };
-
-  const filteredInvoices = invoices.filter(inv => {
-    if (invoiceFilter === 'all') return true;
-    return inv.status === invoiceFilter;
-  });
-
-  const tabs: { id: TabId; name: string; icon: React.ComponentType<{ className?: string }> }[] = [
-    { id: 'overview', name: 'Overview', icon: BarChart3 },
-    { id: 'invoices', name: 'Action Center', icon: FileText },
-    { id: 'tone', name: 'Tone Studio', icon: Bot },
-    { id: 'settings', name: 'Settings', icon: Settings },
-  ];
-
-  if (isLoading) {
-    return (
-      <AppLayout title={`Welcome back, ${firstName}.`} subtitle="Loading your recovery dashboard...">
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[1,2,3,4].map(i => <Skeleton key={i} className="h-32 rounded-2xl" />)}
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <Skeleton className="h-80 rounded-2xl lg:col-span-2" />
-            <Skeleton className="h-80 rounded-2xl" />
-          </div>
-        </div>
-      </AppLayout>
-    );
-  }
-
-  return (
-    <AppLayout 
-      title={`Welcome back, ${firstName}.`} 
-      subtitle="Track what is owed, what is moving, and what Astrix recovered."
-      actions={
-        <button
-          onClick={() => window.dispatchEvent(new CustomEvent('open-upload-modal'))}
-          className="flex items-center gap-2 bg-astrix-teal text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-astrix-darkTeal transition-colors shadow-sm"
-        >
-          <Plus className="w-4 h-4" /> Add Invoice
-        </button>
-      }
-    >
-      {!isOnline && (
-        <div role="status" className="mb-6 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
-          <WifiOff className="h-4 w-4 shrink-0" />
-          You&apos;re offline. Your workspace is safe locally; changes will sync when you reconnect.
-        </div>
-      )}
-
-      {/* Tab Navigation */}
-      <div className="flex gap-1.5 mb-8 bg-white border border-gray-200 rounded-2xl p-1.5 shadow-sm overflow-x-auto hide-scrollbar">
-        {tabs.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => {
-              setActiveTab(tab.id);
-              navigate(tab.id === 'overview' ? '/app' : `/app/${tab.id === 'invoices' ? 'invoices' : tab.id}`);
-            }}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap flex-1 justify-center ${
-              activeTab === tab.id 
-                ? 'bg-gray-900 text-white shadow-sm' 
-                : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
-            }`}
-          >
-            <tab.icon className="w-4 h-4" />
-            <span className="hidden sm:inline">{tab.name}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* ═══════════════════════════════════════════ */}
-      {/* OVERVIEW TAB — THE MONEY SCREEN            */}
-      {/* ═══════════════════════════════════════════ */}
-      {activeTab === 'overview' && (
-        <div className="space-y-6 animate-[fadeIn_0.3s_ease-out]">
-          
-          {/* Metrics Row */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            
-            <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
-              <div className="absolute -right-4 -top-4 w-24 h-24 bg-green-50 rounded-full opacity-60 group-hover:opacity-100 transition-opacity"></div>
-              <div className="relative z-10">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="p-2 bg-green-100 rounded-xl"><DollarSign className="w-4 h-4 text-green-600" /></div>
-                  <span className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">Total Recovered</span>
-                </div>
-                <div className="text-3xl font-heading font-black text-gray-900">{formatCurrency(metrics?.total_recovered || 0)}</div>
-                <div className="text-xs text-green-600 font-bold mt-2 flex items-center gap-1">
-                  <TrendingUp className="w-3 h-3" /> +{formatCurrency(metrics?.this_month_recovered || 0)} this month
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
-              <div className="absolute -right-4 -top-4 w-24 h-24 bg-red-50 rounded-full opacity-60 group-hover:opacity-100 transition-opacity"></div>
-              <div className="relative z-10">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="p-2 bg-red-100 rounded-xl"><AlertCircle className="w-4 h-4 text-red-500" /></div>
-                  <span className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">Outstanding</span>
-                </div>
-                <div className="text-3xl font-heading font-black text-gray-900">{formatCurrency(metrics?.currently_outstanding || 0)}</div>
-                <div className="text-xs text-gray-500 font-bold mt-2">{metrics?.pending_invoices} invoices awaiting payment</div>
-              </div>
-            </div>
-
-            <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
-              <div className="absolute -right-4 -top-4 w-24 h-24 bg-teal-50 rounded-full opacity-60 group-hover:opacity-100 transition-opacity"></div>
-              <div className="relative z-10">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="p-2 bg-teal-100 rounded-xl"><Zap className="w-4 h-4 text-astrix-teal" /></div>
-                  <span className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">Recovery Rate</span>
-                </div>
-                <div className="text-3xl font-heading font-black text-astrix-teal">{metrics?.recovery_rate}%</div>
-                <div className="mt-3 w-full bg-gray-100 rounded-full h-1.5">
-                  <div className="bg-astrix-teal h-1.5 rounded-full" style={{ width: `${metrics?.recovery_rate}%` }}></div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
-              <div className="absolute -right-4 -top-4 w-24 h-24 bg-blue-50 rounded-full opacity-60 group-hover:opacity-100 transition-opacity"></div>
-              <div className="relative z-10">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="p-2 bg-blue-100 rounded-xl"><Activity className="w-4 h-4 text-brand-blue" /></div>
-                  <span className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">Active Chases</span>
-                </div>
-                <div className="text-3xl font-heading font-black text-gray-900">{metrics?.active_chases}</div>
-                <div className="text-xs text-brand-blue font-bold mt-2 flex items-center gap-1">
-                  <Bot className="w-3 h-3" /> AI running autonomously
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Two-column layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-            
-            {/* Activity Feed */}
-            <div className="lg:col-span-3 bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                <h2 className="font-heading text-base font-bold text-gray-900 flex items-center gap-2">
-                  <Activity className="w-4 h-4 text-brand-blue" /> Activity Feed
-                </h2>
-                <span className="flex items-center gap-1.5 text-xs font-bold text-green-600">
-                  <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Live
-                </span>
-              </div>
-              <div className="divide-y divide-gray-50 max-h-[380px] overflow-y-auto">
-                {activities.map(activity => (
-                  <div key={activity.id} className="flex items-start gap-4 px-6 py-4 hover:bg-gray-50 transition-colors">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
-                      activity.type === 'payment_received' ? 'bg-green-100' :
-                      activity.type === 'reminder_sent' ? 'bg-blue-100' :
-                      activity.type === 'ai_action' ? 'bg-purple-100' : 'bg-gray-100'
-                    }`}>
-                      {activity.type === 'payment_received' ? <DollarSign className="w-5 h-5 text-green-600" /> :
-                       activity.type === 'reminder_sent' ? <Send className="w-5 h-5 text-blue-600" /> :
-                       activity.type === 'ai_action' ? <Bot className="w-5 h-5 text-purple-600" /> :
-                       <FileText className="w-5 h-5 text-gray-600" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-900 font-medium leading-snug">{activity.message}</p>
-                      <div className="flex items-center gap-3 mt-1">
-                        <span className="text-xs text-gray-400">{activity.timestamp}</span>
-                        {activity.amount && (
-                          <span className="text-xs font-bold text-gray-600">{formatCurrency(activity.amount)}</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Right Column */}
-            <div className="lg:col-span-2 space-y-4">
-              
-              {/* AI Engine Status Card */}
-              <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-astrix-teal/10 rounded-full blur-2xl"></div>
-                <div className="relative z-10">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
-                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Daily Chase Engine</span>
-                    </div>
-                  </div>
-                  <h3 className="font-heading text-lg font-bold text-white mb-1">AI Running Autonomously</h3>
-                  <p className="text-sm text-gray-400 mb-5">Next batch: Tomorrow 09:00 AM UTC</p>
-                  <div className="space-y-2 text-xs font-mono">
-                    <div className="flex justify-between text-gray-500">
-                      <span>Last run</span><span className="text-white font-bold">Today 9:00 AM</span>
-                    </div>
-                    <div className="flex justify-between text-gray-500">
-                      <span>Reminders sent</span><span className="text-green-400 font-bold">3 today</span>
-                    </div>
-                    <div className="flex justify-between text-gray-500">
-                      <span>Guardrail</span><span className="text-astrix-teal font-bold">3-5 day gap active</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Quick Actions */}
-              <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
-                <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-4">Quick Actions</h3>
-                <div className="space-y-2">
-                  <button 
-                    onClick={() => window.dispatchEvent(new CustomEvent('open-upload-modal'))}
-                    className="w-full flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors text-left group"
-                  >
-                    <div className="p-1.5 bg-brand-blue/10 rounded-lg group-hover:bg-brand-blue/20 transition-colors">
-                      <UploadCloud className="w-4 h-4 text-brand-blue" />
-                    </div>
-                    <div>
-                      <div className="text-sm font-bold text-gray-900">Import Invoices</div>
-                      <div className="text-[11px] text-gray-400">CSV or manual entry</div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-gray-300 ml-auto" />
-                  </button>
-                  <button 
-                    onClick={() => setActiveTab('tone')}
-                    className="w-full flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors text-left group"
-                  >
-                    <div className="p-1.5 bg-purple-100 rounded-lg group-hover:bg-purple-200 transition-colors">
-                      <Bot className="w-4 h-4 text-purple-600" />
-                    </div>
-                    <div>
-                      <div className="text-sm font-bold text-gray-900">Train AI Tone</div>
-                      <div className="text-[11px] text-gray-400">Customize your voice</div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-gray-300 ml-auto" />
-                  </button>
-                  <button 
-                    onClick={() => setActiveTab('settings')}
-                    className="w-full flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors text-left group"
-                  >
-                    <div className="p-1.5 bg-green-100 rounded-lg group-hover:bg-green-200 transition-colors">
-                      <CreditCard className="w-4 h-4 text-green-600" />
-                    </div>
-                    <div>
-                      <div className="text-sm font-bold text-gray-900">Connect Gateway</div>
-                      <div className="text-[11px] text-gray-400">Stripe, Razorpay, UPI</div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-gray-300 ml-auto" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ═══════════════════════════════════════════ */}
-      {/* ACTION CENTER TAB — INVOICES               */}
-      {/* ═══════════════════════════════════════════ */}
-      {activeTab === 'invoices' && (
-        <div className="space-y-6 animate-[fadeIn_0.3s_ease-out]">
-          
-          {/* Stats Strip */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[
-              { label: 'All Invoices', count: invoices.length, color: 'text-gray-900', bg: 'bg-gray-100', filter: 'all' as const },
-              { label: 'Pending', count: invoices.filter(i => i.status === 'pending').length, color: 'text-yellow-700', bg: 'bg-yellow-50 border border-yellow-200', filter: 'pending' as const },
-              { label: 'Paused', count: invoices.filter(i => i.status === 'paused').length, color: 'text-gray-600', bg: 'bg-gray-100', filter: 'paused' as const },
-              { label: 'Paid', count: invoices.filter(i => i.status === 'paid').length, color: 'text-green-700', bg: 'bg-green-50 border border-green-200', filter: 'paid' as const },
-            ].map(stat => (
-              <button 
-                key={stat.label}
-                onClick={() => setInvoiceFilter(stat.filter)}
-                className={`p-4 rounded-2xl text-left transition-all ${stat.bg} ${invoiceFilter === stat.filter ? 'ring-2 ring-astrix-teal ring-offset-2' : 'hover:opacity-80'}`}
-              >
-                <div className="text-2xl font-heading font-black text-gray-900">{stat.count}</div>
-                <div className={`text-xs font-bold ${stat.color}`}>{stat.label}</div>
-              </button>
-            ))}
-          </div>
-
-          {/* Invoice Table */}
-          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50">
-              <h2 className="font-heading text-base font-bold text-gray-900">
-                {invoiceFilter === 'all' ? 'All Invoices' : `${invoiceFilter.charAt(0).toUpperCase() + invoiceFilter.slice(1)} Invoices`}
-              </h2>
-              <button 
-                onClick={() => window.dispatchEvent(new CustomEvent('open-upload-modal'))}
-                className="flex items-center gap-2 bg-astrix-teal text-white px-3 py-2 rounded-lg text-xs font-bold hover:bg-astrix-darkTeal transition-colors"
-              >
-                <Plus className="w-3.5 h-3.5" /> Add Invoice
-              </button>
-            </div>
-
-            {/* Desktop Table */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="border-b border-gray-100">
-                  <tr>
-                    {['Client', 'Amount', 'Due Date', 'Overdue', 'AI Status', 'Reminders', 'Actions'].map(h => (
-                      <th key={h} className="p-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-widest">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {filteredInvoices.map(invoice => (
-                    <tr key={invoice.id} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="p-4">
-                        <div className="font-bold text-gray-900">{invoice.client_name}</div>
-                        <div className="text-xs text-gray-400">{invoice.client_email}</div>
-                      </td>
-                      <td className="p-4">
-                        <span className="font-bold text-gray-900 font-mono">{formatCurrency(invoice.amount, invoice.currency)}</span>
-                      </td>
-                      <td className="p-4">
-                        <span className="text-gray-600">{new Date(invoice.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                      </td>
-                      <td className="p-4">
-                        {invoice.days_overdue > 0 ? (
-                          <span className={`font-bold text-sm ${invoice.days_overdue > 14 ? 'text-red-600' : invoice.days_overdue > 7 ? 'text-orange-500' : 'text-yellow-600'}`}>
-                            {invoice.days_overdue}d
-                          </span>
-                        ) : (
-                          <span className="text-green-600 font-bold">—</span>
-                        )}
-                      </td>
-                      <td className="p-4">{getStatusBadge(invoice.status, invoice.ai_status)}</td>
-                      <td className="p-4">
-                        <span className="font-mono font-bold text-gray-600">{invoice.reminder_count}</span>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-2">
-                          {invoice.status === 'paused' ? (
-                            <button 
-                              onClick={() => handleResumeAI(invoice.id)}
-                              aria-label={`Resume AI for ${invoice.client_name}`}
-                              className="flex items-center gap-1.5 px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-xs font-bold hover:bg-green-200 transition-colors"
-                            >
-                              <Play className="w-3 h-3" /> Resume
-                            </button>
-                          ) : invoice.status !== 'paid' && (
-                            <button 
-                              onClick={() => handlePauseAI(invoice.id)}
-                              aria-label={`Pause AI for ${invoice.client_name}`}
-                              className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-bold hover:bg-gray-200 transition-colors"
-                            >
-                              <Pause className="w-3 h-3" /> Pause AI
-                            </button>
-                          )}
-                          <button className="p-1.5 text-gray-400 hover:text-gray-700 transition-colors rounded-lg hover:bg-gray-100">
-                            <Eye className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile Cards */}
-            <div className="md:hidden divide-y divide-gray-100">
-              {filteredInvoices.map(invoice => (
-                <div key={invoice.id} className="p-4 space-y-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="font-bold text-gray-900">{invoice.client_name}</div>
-                      <div className="text-xs text-gray-400">{invoice.client_email}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-bold text-gray-900 font-mono">{formatCurrency(invoice.amount)}</div>
-                      {invoice.days_overdue > 0 && (
-                        <div className={`text-xs font-bold ${invoice.days_overdue > 14 ? 'text-red-600' : 'text-orange-500'}`}>{invoice.days_overdue}d overdue</div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    {getStatusBadge(invoice.status, invoice.ai_status)}
-                    <div className="flex gap-2">
-                      {invoice.status === 'paused' ? (
-                        <button onClick={() => handleResumeAI(invoice.id)} className="flex items-center gap-1 px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-xs font-bold">
-                          <Play className="w-3 h-3" /> Resume
-                        </button>
-                      ) : invoice.status !== 'paid' && (
-                        <button onClick={() => handlePauseAI(invoice.id)} className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-xs font-bold">
-                          <Pause className="w-3 h-3" /> Pause
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {filteredInvoices.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-16 text-center px-6">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <CheckCircle2 className="w-8 h-8 text-green-600" />
-                </div>
-                <h3 className="font-heading text-lg font-bold text-gray-900 mb-1">All clear!</h3>
-                <p className="text-sm text-gray-500 mb-6">No {invoiceFilter !== 'all' ? invoiceFilter : ''} invoices found.</p>
-                <button
-                  onClick={() => window.dispatchEvent(new CustomEvent('open-upload-modal'))}
-                  className="bg-brand-blue text-white px-5 py-2.5 rounded-xl font-bold hover:bg-blue-700 transition-colors text-sm"
-                >
-                  Add New Invoice
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ═══════════════════════════════════════════ */}
-      {/* TONE STUDIO TAB                            */}
-      {/* ═══════════════════════════════════════════ */}
-      {activeTab === 'tone' && (
-        <div className="space-y-6 animate-[fadeIn_0.3s_ease-out]">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            
-            {/* Left: Training Input */}
-            <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-              <div className="flex items-center gap-3 mb-2">
-                <AIBadge />
-                <h2 className="font-heading text-lg font-bold text-gray-900">AI Tone Training</h2>
-              </div>
-              <p className="text-sm text-gray-500 mb-6">
-                Paste 2–3 of your typical client emails. AI learns your writing style and generates reminders that sound exactly like you.
-              </p>
-              <div className="space-y-5">
-                <div>
-                  <label className="block text-sm font-bold text-gray-900 mb-2">Sample Email(s)</label>
-                  <textarea 
-                    value={toneSample}
-                    onChange={e => setToneSample(e.target.value)}
-                    placeholder="Paste a typical email you'd send to a client about payment..."
-                    className="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm outline-none focus:ring-2 focus:ring-brand-blue resize-none h-36 transition-all"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-bold text-gray-900 mb-3">
-                    Tone Escalation Level — <span className="text-brand-blue">Level {toneLevel}</span>
-                    <span className="ml-2 text-gray-400 font-normal">
-                      ({toneLevel === 1 ? 'Friendly 😊' : toneLevel === 2 ? 'Balanced' : 'Firm 📋'})
-                    </span>
-                  </label>
-                  <div className="grid grid-cols-3 gap-3 mb-3">
-                    {[
-                      { level: 1, label: 'Friendly', emoji: '😊', desc: 'Warm & casual' },
-                      { level: 2, label: 'Balanced', emoji: '📧', desc: 'Professional' },
-                      { level: 3, label: 'Firm', emoji: '📋', desc: 'Assertive & direct' },
-                    ].map(opt => (
-                      <button
-                        key={opt.level}
-                        onClick={() => setToneLevel(opt.level)}
-                        className={`p-3 rounded-xl text-sm font-bold transition-all border ${
-                          toneLevel === opt.level 
-                            ? 'bg-brand-blue text-white border-brand-blue shadow-sm' 
-                            : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-gray-300'
-                        }`}
-                      >
-                        <div className="text-lg mb-1">{opt.emoji}</div>
-                        <div>{opt.label}</div>
-                        <div className={`text-[10px] font-normal mt-0.5 ${toneLevel === opt.level ? 'text-blue-100' : 'text-gray-400'}`}>{opt.desc}</div>
-                      </button>
-                    ))}
-                  </div>
-                  <p className="text-xs text-gray-400">Level 1 starts your first reminder. AI escalates as invoices age.</p>
-                </div>
-
-                <button 
-                  onClick={handleGeneratePreview}
-                  disabled={isGeneratingPreview || !toneSample.trim()}
-                  className="w-full bg-gray-900 text-white py-3.5 rounded-xl font-bold hover:bg-black disabled:opacity-50 transition-colors flex items-center justify-center gap-2 text-sm"
-                >
-                  {isGeneratingPreview ? (
-                    <><RefreshCw className="w-4 h-4 animate-spin" /> Generating...</>
-                  ) : (
-                    <><Sparkles className="w-4 h-4" /> Generate Preview</>
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* Right: Preview Output */}
-            <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm flex flex-col">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="font-heading text-lg font-bold text-gray-900">AI-Generated Preview</h2>
-                {generatedPreview && (
-                  <button 
-                    onClick={() => { navigator.clipboard.writeText(generatedPreview); addToast('Copied to clipboard', 'success'); }}
-                    className="text-xs font-bold text-brand-blue hover:underline"
-                  >
-                    Copy
-                  </button>
-                )}
-              </div>
-
-              {generatedPreview ? (
-                <div className="flex-1 space-y-4">
-                  <div className="flex gap-2 flex-wrap">
-                    <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${
-                      toneLevel === 1 ? 'bg-green-100 text-green-700' : 
-                      toneLevel === 2 ? 'bg-blue-100 text-blue-700' : 
-                      'bg-orange-100 text-orange-700'
-                    }`}>
-                      Level {toneLevel} — {toneLevel === 1 ? 'Friendly' : toneLevel === 2 ? 'Balanced' : 'Firm'}
-                    </span>
-                    <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-purple-100 text-purple-700">Your Voice Cloned</span>
-                  </div>
-                  <div className="bg-gray-50 border border-gray-200 rounded-xl p-5 text-sm text-gray-800 whitespace-pre-wrap leading-relaxed font-medium flex-1 min-h-[200px]">
-                    {generatedPreview}
-                  </div>
-                  <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl">
-                    <div className="flex items-start gap-3">
-                      <Zap className="w-5 h-5 text-brand-blue shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-bold text-gray-900 mb-1">1-Click Checkout Embedded</p>
-                        <p className="text-xs text-gray-600">Every reminder includes a unique payment link (<span className="font-mono text-brand-blue">pay.astrix.ai/1042</span>) via your connected gateway.</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 min-h-[280px] text-center p-8">
-                  <Bot className="w-12 h-12 text-gray-200 mb-4" />
-                  <p className="text-sm font-bold text-gray-500 mb-1">No preview yet</p>
-                  <p className="text-xs text-gray-400">Paste a sample email and click Generate Preview</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ═══════════════════════════════════════════ */}
-      {/* SETTINGS TAB                               */}
-      {/* ═══════════════════════════════════════════ */}
-      {activeTab === 'settings' && (
-        <div className="space-y-6 animate-[fadeIn_0.3s_ease-out]">
-          
-          {/* Plan Banner */}
-          <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
-            <div className="absolute right-0 top-0 h-full w-48 bg-gradient-to-l from-brand-blue/20 to-transparent"></div>
-            <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Current Plan</div>
-                <h3 className="font-heading text-2xl font-bold text-white mb-1">Hook — Free</h3>
-                <p className="text-sm text-gray-400">3 free recoveries used · 0 remaining</p>
-              </div>
-              <Link 
-                to="/pricing"
-                className="bg-brand-blue text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg text-sm whitespace-nowrap"
-              >
-                Upgrade to Solo — $29/mo
-              </Link>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Payment Gateways */}
-            <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="p-2 bg-green-100 rounded-xl"><CreditCard className="w-5 h-5 text-green-600" /></div>
-                <div>
-                  <h3 className="font-bold text-gray-900">Payment Gateways</h3>
-                  <p className="text-xs text-gray-400">Connect to generate 1-click checkout links</p>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3.5 bg-green-50 border border-green-200 rounded-xl">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 bg-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-sm shadow-sm">S</div>
-                    <div>
-                      <div className="font-bold text-gray-900 text-sm">Stripe</div>
-                      <div className="text-xs text-gray-400">Connected via API Key</div>
-                    </div>
-                  </div>
-                  <span className="text-xs font-bold text-green-600 flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Active
-                  </span>
-                </div>
-                <button className="w-full p-3.5 border-2 border-dashed border-gray-200 rounded-xl text-sm font-bold text-gray-400 hover:text-gray-700 hover:border-gray-300 transition-colors flex items-center justify-center gap-2 group">
-                  <Plus className="w-4 h-4" /> Connect Razorpay
-                </button>
-                <button className="w-full p-3.5 border-2 border-dashed border-gray-200 rounded-xl text-sm font-bold text-gray-400 hover:text-gray-700 hover:border-gray-300 transition-colors flex items-center justify-center gap-2 group">
-                  <Plus className="w-4 h-4" /> Add UPI / Static Link
-                </button>
-              </div>
-            </div>
-
-            {/* Notifications */}
-            <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="p-2 bg-blue-100 rounded-xl"><Mail className="w-5 h-5 text-blue-600" /></div>
-                <div>
-                  <h3 className="font-bold text-gray-900">Notifications</h3>
-                  <p className="text-xs text-gray-400">Control what alerts you receive</p>
-                </div>
-              </div>
-              <div className="space-y-4">
-                {[
-                  { label: 'Payment received alert', checked: true },
-                  { label: 'Reminder sent confirmation', checked: true },
-                  { label: 'Invoice dispute alert', checked: true },
-                  { label: 'Weekly recovery summary', checked: false },
-                  { label: 'AI engine status digest', checked: false },
-                ].map((item, i) => (
-                  <label key={i} className="flex items-center justify-between cursor-pointer group">
-                    <span className="text-sm text-gray-700 font-medium group-hover:text-gray-900 transition-colors">{item.label}</span>
-                    <input type="checkbox" defaultChecked={item.checked} className="w-5 h-5 accent-astrix-teal rounded cursor-pointer" />
-                  </label>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Floating Action Button */}
-      <button 
-        onClick={() => window.dispatchEvent(new CustomEvent('open-upload-modal'))}
-        className="fixed bottom-6 right-6 md:bottom-8 md:right-8 bg-gray-900 text-white p-4 rounded-full shadow-xl hover:bg-astrix-teal hover:shadow-glow-blue transition-all duration-300 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-blue z-40 group flex items-center gap-3 overflow-hidden hover:-translate-y-1"
-        aria-label="Add Invoice"
-        title="Add Invoice"
-      >
-        <UploadCloud className="w-6 h-6 shrink-0" />
-        <span className="max-w-0 overflow-hidden whitespace-nowrap group-hover:max-w-xs transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] font-bold text-sm">
-          Add Invoice
-        </span>
-      </button>
-    </AppLayout>
-  );
+    {view === 'overview' && <Overview go={go} notify={notify} />}
+    {view === 'invoices' && <InvoiceCenter filtered={filtered} filter={filter} setFilter={setFilter} query={query} setQuery={setQuery} notify={notify} />}
+    {view === 'tone' && <ToneStudio tone={tone} setTone={setTone} toneLevel={toneLevel} setToneLevel={setToneLevel} preview={preview} generating={generating} generate={generate} notify={notify} />}
+    {view === 'gateways' && <GatewayView notify={notify} />}
+    {view === 'analytics' && <AnalyticsView />}
+    {view === 'settings' && <SettingsView notify={notify} />}
+  </AppLayout>;
 };
+
+function Overview({ go, notify }: { go: (v: View) => void; notify: (m: string) => void }) { return <div className="flex flex-col gap-6 animate-[fadeIn_0.3s_ease-out]">
+  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">{[['Recovered','$47,200','+$12,400 this month',DollarSign,'text-emerald-600','bg-emerald-50'],['Outstanding','$8,290','4 invoices need attention',AlertCircle,'text-rose-600','bg-rose-50'],['Recovery rate','94%','+8% vs last month',Target,'text-astrix-teal','bg-teal-50'],['Active sequences','3','Astrix is working now',Bot,'text-brand-blue','bg-blue-50']].map(([label,value,meta,Icon,color,bg]) => <div key={label as string} className="group rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"><div className="mb-5 flex items-center justify-between"><span className="text-[11px] font-bold uppercase tracking-[0.16em] text-gray-500">{label as string}</span><div className={`rounded-xl p-2 ${bg as string}`}><Icon className={`h-4 w-4 ${color as string}`} /></div></div><div className="font-heading text-3xl font-black text-gray-950">{value as string}</div><div className={`mt-2 flex items-center gap-1 text-xs font-bold ${color as string}`}><ArrowUpRight className="h-3 w-3" /> {meta as string}</div></div>)}</div>
+  <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.35fr_0.65fr]"><section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"><div className="flex items-center justify-between border-b border-gray-100 px-6 py-5"><div><h2 className="font-heading text-lg font-bold text-gray-950">What needs your attention</h2><p className="mt-1 text-sm text-gray-500">Astrix has prepared the next best actions.</p></div><button onClick={() => go('invoices')} className="flex items-center gap-1 text-sm font-bold text-brand-blue hover:gap-2">View all <ChevronRight className="h-4 w-4" /></button></div><div className="divide-y divide-gray-100">{invoices.slice(0,3).map(invoice => <InvoiceRow key={invoice.id} invoice={invoice} notify={notify} />)}</div></section><section className="rounded-2xl bg-gray-950 p-6 text-white shadow-xl"><div className="flex items-center justify-between"><div className="flex items-center gap-2"><div className="rounded-lg bg-astrix-teal/20 p-2"><Sparkles className="h-4 w-4 text-astrix-teal" /></div><span className="text-xs font-bold uppercase tracking-[0.16em] text-gray-400">Astrix engine</span></div><span className="flex items-center gap-1.5 text-xs font-bold text-emerald-400"><span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" /> Live</span></div><h2 className="mt-8 font-heading text-2xl font-black">Your follow-ups are handled.</h2><p className="mt-3 text-sm leading-6 text-gray-400">Astrix is monitoring 3 sequences and will stop automatically when a payment lands.</p><div className="mt-8 flex flex-col gap-3"><div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3"><span className="text-sm text-gray-400">Next action</span><span className="text-sm font-bold">Today, 2:30 PM</span></div><button onClick={() => go('tone')} className="flex items-center justify-center gap-2 rounded-xl bg-astrix-teal px-4 py-3 text-sm font-bold text-white transition hover:bg-astrix-darkTeal"><Bot className="h-4 w-4" /> Tune your voice</button></div></section></div>
+  <section className="rounded-2xl border border-gray-200 bg-white shadow-sm"><div className="flex items-center justify-between border-b border-gray-100 px-6 py-5"><h2 className="flex items-center gap-2 font-heading text-lg font-bold text-gray-950"><Activity className="h-4 w-4 text-brand-blue" /> Recent activity</h2><button onClick={() => notify('Activity export is ready for backend wiring.')} className="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-gray-950"><Download className="h-4 w-4" /> Export</button></div><div className="grid gap-0 divide-y divide-gray-100 md:grid-cols-2 md:divide-x md:divide-y-0">{activity.map(([type,title,desc,amount,time]) => <div key={title} className="flex gap-4 px-6 py-4"><div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${type === 'payment' ? 'bg-emerald-50 text-emerald-600' : type === 'ai' ? 'bg-violet-50 text-violet-600' : 'bg-blue-50 text-blue-600'}`}>{type === 'payment' ? <DollarSign className="h-4 w-4" /> : type === 'ai' ? <Bot className="h-4 w-4" /> : type === 'file' ? <FileText className="h-4 w-4" /> : <Send className="h-4 w-4" />}</div><div className="min-w-0 flex-1"><div className="text-sm font-bold text-gray-900">{title}</div><div className="mt-1 text-xs text-gray-500">{desc}</div><div className="mt-2 flex items-center gap-3 text-xs text-gray-400"><span>{time}</span>{amount && <span className="font-bold text-gray-700">{amount}</span>}</div></div></div>)}</div></section>
+</div>; }
+
+function InvoiceRow({ invoice, notify }: { invoice: Invoice; notify: (m: string) => void }) { return <div className="flex flex-col gap-4 px-6 py-4 transition hover:bg-gray-50 sm:flex-row sm:items-center sm:justify-between"><div className="flex min-w-0 items-center gap-3"><div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xs font-black ${invoice.color}`}>{invoice.initials}</div><div className="min-w-0"><div className="truncate text-sm font-bold text-gray-950">{invoice.client}</div><div className="mt-1 flex items-center gap-2 text-xs text-gray-500"><span>{invoice.id}</span><span>·</span><span>{invoice.age}</span></div></div></div><div className="flex items-center justify-between gap-4 sm:justify-end"><div className="text-right"><div className="font-heading text-sm font-black text-gray-950">{money(invoice.amount)}</div><div className="mt-1 text-xs text-gray-500">{invoice.step}</div></div><button onClick={() => notify(invoice.status === 'Paid' ? 'Invoice details opened.' : `Reviewing ${invoice.id} for ${invoice.client}.`)} className="rounded-lg border border-gray-200 p-2 text-gray-500 transition hover:border-gray-900 hover:text-gray-950" aria-label={`Open ${invoice.id}`}><ChevronRight className="h-4 w-4" /></button></div></div>; }
+
+function InvoiceCenter({ filtered, filter, setFilter, query, setQuery, notify }: { filtered: Invoice[]; filter: 'All' | InvoiceStatus; setFilter: (f: 'All' | InvoiceStatus) => void; query: string; setQuery: (q: string) => void; notify: (m: string) => void }) { return <div className="flex flex-col gap-6 animate-[fadeIn_0.3s_ease-out]"><div className="grid grid-cols-2 gap-4 lg:grid-cols-4">{[['Needs attention','$3,290','2 invoices','text-rose-600'],['In sequence','$1,800','1 active chase','text-brand-blue'],['Recovered','$1,500','This week','text-emerald-600'],['Paused','$3,200','1 invoice','text-gray-500']].map(([label,value,meta,color]) => <div key={label} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"><div className="text-[10px] font-bold uppercase tracking-widest text-gray-500">{label}</div><div className={`mt-3 font-heading text-2xl font-black ${color}`}>{value}</div><div className="mt-1 text-xs text-gray-500">{meta}</div></div>)}</div><section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"><div className="flex flex-col gap-4 border-b border-gray-100 p-5 lg:flex-row lg:items-center lg:justify-between"><div><h2 className="font-heading text-lg font-bold text-gray-950">Invoice action center</h2><p className="mt-1 text-sm text-gray-500">Every invoice, every next step, one calm workspace.</p></div><button onClick={() => notify('Invoice import opened.')} className="flex items-center justify-center gap-2 rounded-xl bg-gray-950 px-4 py-2.5 text-sm font-bold text-white hover:bg-gray-800"><UploadCloud className="h-4 w-4" /> Import invoices</button></div><div className="flex flex-col gap-3 border-b border-gray-100 p-5 md:flex-row"><div className="relative flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search client or invoice ID" className="w-full rounded-xl border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-4 text-sm outline-none transition focus:border-brand-blue focus:bg-white focus:ring-2 focus:ring-brand-blue/10" /></div><div className="flex gap-2 overflow-x-auto">{(['All','Needs attention','In sequence','Paid','Paused'] as const).map(status => <button key={status} onClick={() => setFilter(status)} className={`whitespace-nowrap rounded-xl px-3 py-2 text-xs font-bold transition ${filter === status ? 'bg-gray-950 text-white' : 'border border-gray-200 text-gray-500 hover:border-gray-400'}`}>{status}</button>)}</div></div><div className="hidden grid-cols-[1.5fr_0.8fr_0.8fr_1fr_auto] gap-4 border-b border-gray-100 bg-gray-50 px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 md:grid"><span>Client</span><span>Amount</span><span>Due</span><span>Status</span><span /></div>{filtered.length ? filtered.map(invoice => <div key={invoice.id} className="grid gap-4 border-b border-gray-100 px-5 py-5 last:border-0 md:grid-cols-[1.5fr_0.8fr_0.8fr_1fr_auto] md:items-center md:px-6"><div className="flex items-center gap-3"><div className={`flex h-10 w-10 items-center justify-center rounded-xl text-xs font-black ${invoice.color}`}>{invoice.initials}</div><div><div className="text-sm font-bold text-gray-950">{invoice.client}</div><div className="mt-1 text-xs text-gray-500">{invoice.id} · {invoice.email}</div></div></div><div className="font-heading text-sm font-black text-gray-950">{invoice.amount}</div><div><div className="text-sm font-medium text-gray-700">{invoice.due}</div><div className="mt-1 text-xs text-gray-500">{invoice.age}</div></div><div><span className={`inline-flex rounded-lg px-2.5 py-1 text-xs font-bold ${invoice.status === 'Paid' ? 'bg-emerald-50 text-emerald-700' : invoice.status === 'Paused' ? 'bg-gray-100 text-gray-600' : invoice.status === 'In sequence' ? 'bg-blue-50 text-blue-700' : 'bg-rose-50 text-rose-700'}`}>{invoice.status}</span><div className="mt-1 text-xs text-gray-500">{invoice.step}</div></div><button onClick={() => notify(`${invoice.id} action menu opened.`)} className="w-fit rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-900"><MoreHorizontal className="h-4 w-4" /></button></div>) : <div className="flex flex-col items-center gap-3 px-6 py-16 text-center"><Search className="h-8 w-8 text-gray-300" /><h3 className="font-bold text-gray-900">No invoices found</h3><p className="text-sm text-gray-500">Try another search or filter.</p></div>}</section></div>; }
+
+function ToneStudio({ tone, setTone, toneLevel, setToneLevel, preview, generating, generate, notify }: { tone: string; setTone: (v: string) => void; toneLevel: number; setToneLevel: (v: number) => void; preview: string; generating: boolean; generate: () => void; notify: (m: string) => void }) { return <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr] animate-[fadeIn_0.3s_ease-out]"><section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"><div className="mb-6 flex items-center gap-3"><div className="rounded-xl bg-violet-50 p-3"><Bot className="h-5 w-5 text-violet-600" /></div><div><h2 className="font-heading text-lg font-bold text-gray-950">Teach Astrix your voice</h2><p className="mt-1 text-sm text-gray-500">Your reminders should sound like you, not a robot.</p></div></div><label className="mb-2 block text-sm font-bold text-gray-900" htmlFor="tone-sample">Paste a real message you&apos;ve sent</label><textarea id="tone-sample" value={tone} onChange={e => setTone(e.target.value)} rows={9} placeholder="Hi Sarah, just checking in on..." className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm leading-6 text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-violet-400 focus:bg-white focus:ring-2 focus:ring-violet-100" /><div className="mt-5"><div className="mb-3 flex justify-between text-sm"><span className="font-bold text-gray-900">Reminder firmness</span><span className="font-bold text-violet-600">{['Warm','Balanced','Firm'][toneLevel]}</span></div><input type="range" min="0" max="2" value={toneLevel} onChange={e => setToneLevel(Number(e.target.value))} className="w-full accent-violet-600" /><div className="mt-2 flex justify-between text-xs text-gray-400"><span>Warm</span><span>Balanced</span><span>Firm</span></div></div><button disabled={generating} onClick={generate} className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-gray-950 px-4 py-3 text-sm font-bold text-white transition hover:bg-gray-800 disabled:cursor-wait disabled:opacity-60">{generating ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} {generating ? 'Writing your preview...' : 'Generate a preview'}</button></section><section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"><div className="flex items-center justify-between"><div><h2 className="font-heading text-lg font-bold text-gray-950">Your reminder preview</h2><p className="mt-1 text-sm text-gray-500">Astrix will stop when payment is received.</p></div><span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">Safe by default</span></div><div className="mt-6 min-h-[340px] rounded-2xl border border-gray-200 bg-gray-50 p-6">{preview ? <><div className="mb-5 flex items-center gap-3 border-b border-gray-200 pb-4"><div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-950 text-xs font-bold text-white">A</div><div><div className="text-sm font-bold text-gray-900">Astrix draft</div><div className="text-xs text-gray-500">For Sarah at Acme Corporation</div></div></div><pre className="whitespace-pre-wrap font-sans text-sm leading-7 text-gray-700">{preview}</pre></> : <div className="flex h-full min-h-[280px] flex-col items-center justify-center text-center"><Mail className="mb-4 h-8 w-8 text-gray-300" /><h3 className="font-bold text-gray-900">Your preview will appear here</h3><p className="mt-2 max-w-xs text-sm leading-6 text-gray-500">Paste a message on the left and generate a safe, editable follow-up.</p></div>}</div><div className="mt-4 flex items-center justify-between text-xs text-gray-500"><span className="flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-emerald-600" /> No email is sent without your approval</span><button onClick={() => notify('Tone saved for future reminders.')} className="font-bold text-brand-blue hover:underline">Save voice profile</button></div></section></div>; }
+
+function GatewayView({ notify }: { notify: (m: string) => void }) { return <div className="flex flex-col gap-6 animate-[fadeIn_0.3s_ease-out]"><div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"><div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between"><div className="flex items-center gap-4"><div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50"><CreditCard className="h-6 w-6 text-brand-blue" /></div><div><h2 className="font-heading text-lg font-bold text-gray-950">Payment destinations</h2><p className="mt-1 text-sm text-gray-500">Links Astrix can place in your recovery emails.</p></div></div><span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-700"><AlertCircle className="h-3.5 w-3.5" /> Demo connection</span></div><div className="mt-8 flex items-center justify-between rounded-xl border border-gray-200 p-4"><div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-xs font-black text-gray-600">STR</div><div><div className="text-sm font-bold text-gray-900">Stripe checkout</div><div className="mt-1 text-xs text-gray-500">Connected for payment links</div></div></div><button onClick={() => notify('Stripe connection settings opened.')} className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-bold text-gray-700 hover:bg-gray-50">Manage</button></div><button onClick={() => notify('Connect a gateway flow is ready for backend wiring.')} className="mt-4 flex items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 px-4 py-3 text-sm font-bold text-gray-600 hover:border-brand-blue hover:text-brand-blue"><Plus className="h-4 w-4" /> Connect another gateway</button></div><div className="grid gap-4 md:grid-cols-3">{[['Secure links','Every reminder gets a unique payment destination.'],['Automatic stop','Sequences pause as soon as payment lands.'],['Clear audit trail','See which link was clicked and when.']].map(([title,desc]) => <div key={title} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"><CheckCircle2 className="h-5 w-5 text-emerald-600" /><h3 className="mt-4 font-bold text-gray-900">{title}</h3><p className="mt-2 text-sm leading-6 text-gray-500">{desc}</p></div>)}</div></div>; }
+
+function AnalyticsView() { return <div className="flex flex-col gap-6 animate-[fadeIn_0.3s_ease-out]"><div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center"><div><h2 className="font-heading text-lg font-bold text-gray-950">Recovery performance</h2><p className="mt-1 text-sm text-gray-500">A clear view of how your cash flow is improving.</p></div><button className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-bold text-gray-600 hover:bg-gray-50"><Download className="h-4 w-4" /> Export report</button></div><div className="grid gap-4 sm:grid-cols-3">{[['Recovery rate','94%','+8.2%'],['Avg. time to payment','6.4 days','-2.1 days'],['Recovered this month','$12,400','+22.4%']].map(([label,value,trend]) => <div key={label} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"><span className="text-xs font-bold uppercase tracking-widest text-gray-500">{label}</span><div className="mt-3 font-heading text-3xl font-black text-gray-950">{value}</div><div className="mt-2 flex items-center gap-1 text-xs font-bold text-emerald-600"><ArrowUpRight className="h-3 w-3" /> {trend} vs previous period</div></div>)}</div><div className="grid gap-6 lg:grid-cols-[1.5fr_0.5fr]"><section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"><div className="flex items-center justify-between"><h2 className="font-heading font-bold text-gray-950">Recovered over time</h2><select className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-bold text-gray-600"><option>Last 30 days</option><option>Last 90 days</option></select></div><div className="mt-8 flex h-64 items-end gap-2 border-b border-l border-gray-200 px-4 pb-0 pt-8">{[34,42,38,51,47,63,58,72,68,80,76,92,86,100].map((height, i) => <div key={i} className="group relative flex-1 rounded-t-md bg-brand-blue/20 transition hover:bg-brand-blue" style={{ height: `${height}%` }}><span className="absolute -top-6 left-1/2 hidden -translate-x-1/2 text-[10px] font-bold text-gray-500 group-hover:block">${Math.round(height * 124)}</span></div>)}</div><div className="mt-3 flex justify-between text-[10px] font-bold uppercase tracking-widest text-gray-400"><span>Jan 1</span><span>Jan 15</span><span>Jan 30</span></div></section><section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"><h2 className="font-heading font-bold text-gray-950">Sequence health</h2><div className="mt-6 flex flex-col gap-5">{[['Friendly nudge','68%','bg-emerald-500'],['Firm follow-up','22%','bg-brand-blue'],['Escalation','10%','bg-violet-500']].map(([label,value,color]) => <div key={label}><div className="mb-2 flex justify-between text-sm"><span className="font-medium text-gray-600">{label}</span><span className="font-bold text-gray-950">{value}</span></div><div className="h-2 rounded-full bg-gray-100"><div className={`h-2 rounded-full ${color}`} style={{ width: value }} /></div></div>)}</div></section></div></div>; }
+
+function SettingsView({ notify }: { notify: (m: string) => void }) { const [saved, setSaved] = useState(false); return <div className="grid gap-6 lg:grid-cols-[220px_1fr] animate-[fadeIn_0.3s_ease-out]"><aside className="flex gap-2 overflow-x-auto lg:flex-col">{['General','Team & access','Notifications','Billing & plan','Privacy'].map((item, i) => <button key={item} className={`whitespace-nowrap rounded-xl px-4 py-3 text-left text-sm font-bold ${i === 0 ? 'bg-gray-950 text-white' : 'text-gray-500 hover:bg-white hover:text-gray-950'}`}>{item}</button>)}</aside><section className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"><div className="border-b border-gray-100 pb-6"><h2 className="font-heading text-xl font-bold text-gray-950">Workspace settings</h2><p className="mt-1 text-sm text-gray-500">Make Astrix fit the way your business operates.</p></div><div className="flex flex-col gap-6 py-6"><label className="flex flex-col gap-2 text-sm font-bold text-gray-900">Workspace name<input defaultValue="Astrix Studio" className="max-w-lg rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 font-normal outline-none focus:border-brand-blue focus:bg-white" /></label><label className="flex flex-col gap-2 text-sm font-bold text-gray-900">Default currency<select className="max-w-lg rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 font-normal outline-none focus:border-brand-blue focus:bg-white"><option>USD — US Dollar</option><option>EUR — Euro</option><option>GBP — Pound Sterling</option></select></label><div className="flex items-center justify-between rounded-xl border border-gray-200 p-4"><div><div className="text-sm font-bold text-gray-900">Automatic reminders</div><div className="mt-1 text-xs text-gray-500">Let Astrix send approved sequences on schedule.</div></div><button onClick={() => notify('Automatic reminders toggled.')} className="relative h-6 w-11 rounded-full bg-astrix-teal"><span className="absolute right-1 top-1 h-4 w-4 rounded-full bg-white" /></button></div></div><div className="flex flex-col justify-between gap-3 border-t border-gray-100 pt-5 sm:flex-row sm:items-center"><span className="text-xs text-gray-500">{saved ? 'Saved just now' : 'Unsaved changes'}</span><button onClick={() => { setSaved(true); notify('Workspace settings saved.'); }} className="rounded-xl bg-gray-950 px-5 py-3 text-sm font-bold text-white hover:bg-gray-800">Save changes</button></div></section></div>; }
