@@ -12,6 +12,7 @@ import { useToast } from '../../contexts/ToastContext';
 
 const ADMIN_NAV = [
   { name: 'User Management', icon: Users, id: 'users' },
+  { name: 'Recovery Operations', icon: TrendingUp, id: 'recovery' },
   { name: 'System Health', icon: Activity, id: 'health' },
 ];
 
@@ -20,7 +21,7 @@ export const AdminDashboard: React.FC = () => {
   const { addToast } = useToast();
   const navigate = useNavigate();
   const { data: adminUsers, isLoading, refetch } = useAdminUsers();
-  const [activeTab, setActiveTab] = useState<'users' | 'health'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'recovery' | 'health'>('users');
   const [search, setSearch] = useState('');
   const [processingId, setProcessingId] = useState<string | null>(null);
 
@@ -71,7 +72,7 @@ export const AdminDashboard: React.FC = () => {
         </div>
         <nav className="flex-1 px-3 py-4 space-y-1">
           {ADMIN_NAV.map(item => (
-            <button key={item.id} onClick={() => setActiveTab(item.id as 'users' | 'health')}
+            <button key={item.id} onClick={() => setActiveTab(item.id as 'users' | 'recovery' | 'health')}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === item.id ? 'bg-brand-blue text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}>
               <item.icon className="w-4 h-4 shrink-0" />
               {item.name}
@@ -98,7 +99,7 @@ export const AdminDashboard: React.FC = () => {
         <div className="max-w-[1200px] mx-auto animate-[fadeIn_0.4s_ease-out]">
           <div className="mb-8">
             <h1 className="font-heading text-3xl font-bold text-white mb-1">
-              {activeTab === 'users' ? 'User Management' : 'System Health'}
+              {activeTab === 'users' ? 'User Management' : activeTab === 'recovery' ? 'Recovery Operations' : 'System Health'}
             </h1>
             <p className="text-gray-500 text-sm">Astrix AI Admin Dashboard</p>
           </div>
@@ -120,6 +121,22 @@ export const AdminDashboard: React.FC = () => {
               </div>
             ))}
           </div>
+
+          {/* ─── RECOVERY OPERATIONS ─── */}
+          {activeTab === 'recovery' && (
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+              <div className="rounded-2xl border border-gray-800 bg-gray-900 p-6 lg:col-span-2">
+                <div className="mb-5 flex items-center justify-between"><div><h2 className="font-heading text-lg font-bold text-white">Recovery pipeline</h2><p className="mt-1 text-sm text-gray-500">Operational signals across every workspace.</p></div><span className="rounded-full bg-green-900/40 px-3 py-1 text-xs font-bold text-green-300">Live</span></div>
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                  {[['Queued reminders','38','+12%'],['Sent today','89','+8%'],['Payments recovered','$12.4k','+22%'],['Needs review','6','-4%']].map(([label,value,trend]) => <div key={label} className="rounded-xl border border-gray-800 bg-gray-950/50 p-4"><div className="text-xs font-bold uppercase tracking-widest text-gray-500">{label}</div><div className="mt-2 text-2xl font-black text-white">{value}</div><div className="mt-1 text-xs font-bold text-green-400">{trend} vs last week</div></div>)}
+                </div>
+                <div className="mt-6 flex flex-col gap-3">
+                  {[['Tone review queue','3 drafts need approval before sending','Review'],['Gateway failures','2 payment links need reconnection','Investigate'],['Escalation guardrail','All workspaces within policy','View policy']].map(([title,description,action]) => <div key={title} className="flex items-center justify-between rounded-xl border border-gray-800 px-4 py-4"><div><div className="font-bold text-white">{title}</div><div className="mt-1 text-sm text-gray-500">{description}</div></div><button onClick={() => addToast(`${action} flow is ready for backend wiring.`, 'success')} className="rounded-lg border border-gray-700 px-3 py-2 text-xs font-bold text-gray-300 hover:bg-gray-800">{action}</button></div>)}
+                </div>
+              </div>
+              <div className="rounded-2xl border border-gray-800 bg-gray-900 p-6"><h2 className="font-heading text-lg font-bold text-white">Support pulse</h2><p className="mt-1 text-sm text-gray-500">Signals worth watching today.</p><div className="mt-6 flex flex-col gap-4">{[['Customer satisfaction','94%','green'],['First response time','18 min','blue'],['Open conversations','12','yellow']].map(([label,value,color]) => <div key={label} className="flex items-center justify-between border-b border-gray-800 pb-4 last:border-0"><span className="text-sm text-gray-400">{label}</span><span className={`font-mono text-lg font-bold ${color === 'green' ? 'text-green-400' : color === 'blue' ? 'text-brand-blue' : 'text-yellow-400'}`}>{value}</span></div>)}</div></div>
+            </div>
+          )}
 
           {/* ─── USER MANAGEMENT ─── */}
           {activeTab === 'users' && (
