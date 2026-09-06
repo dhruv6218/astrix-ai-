@@ -59,10 +59,10 @@ export const Step1Workspace = () => {
     <OnboardingLayout step={1} totalSteps={3} showSkip onSkip={handleSkip}>
       <div className="text-center mb-10">
         <h1 className="font-heading text-3xl md:text-4xl font-bold text-gray-900 mb-3 tracking-tight">
-          Connect Your Payment Gateway
+          Where Should Clients Pay You?
         </h1>
         <p className="text-gray-500 text-base font-medium max-w-lg mx-auto">
-          Astrix embeds a 1-click checkout link in every reminder. Connect where your clients pay you.
+          Astrix adds a one-click payment link to every reminder, so clients can settle an overdue invoice without the back-and-forth.
         </p>
       </div>
 
@@ -79,7 +79,7 @@ export const Step1Workspace = () => {
           </div>
           <h3 className="font-heading text-2xl font-bold text-gray-900 mb-2">{selected?.label} Connected!</h3>
           <p className="text-gray-500 font-medium mb-8">
-            Great! Astrix will now embed a live payment link from {selected?.label} in every reminder email.
+            Great! Astrix will use {selected?.label} as the payment destination in every recovery reminder. You can change this later in Settings.
           </p>
           <button onClick={handleContinue}
             className="w-full bg-brand-blue text-white py-4 rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-glow-blue text-base">
@@ -112,7 +112,7 @@ export const Step1Workspace = () => {
                 className="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl p-3.5 outline-none focus:ring-4 focus:ring-brand-blue/20 focus:border-brand-blue font-mono transition-all mb-4" />
               <div className="flex items-center gap-2 mb-4 p-3 bg-yellow-50 border border-yellow-100 rounded-xl">
                 <AlertCircle className="w-4 h-4 text-yellow-600 shrink-0" />
-                <p className="text-xs text-yellow-800 font-medium">Demo mode: Keys are stored locally and never sent to a server.</p>
+                <p className="text-xs text-yellow-800 font-medium">Demo mode: this frontend stores connection details locally. Connect a live gateway before launch.</p>
               </div>
               <button type="submit" disabled={isLoading || !apiKey.trim()}
                 className="w-full bg-brand-blue text-white py-3.5 rounded-xl font-bold hover:bg-blue-700 disabled:opacity-50 transition-colors">

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AppLayout } from '../../layouts/AppLayout';
 import { 
   TrendingUp, DollarSign, AlertCircle, Zap, Activity,
-  Send, Bot, UploadCloud, CreditCard, RefreshCw,
+  Send, Bot, UploadCloud, CreditCard, RefreshCw, WifiOff,
   Sparkles, Play, Pause, Eye, CheckCircle2,
   ArrowRight, Mail, Clock, BarChart3, FileText,
   Settings, ChevronRight, Plus
@@ -89,6 +89,27 @@ export const Dashboard = () => {
   const [toneSample, setToneSample] = useState('');
   const [generatedPreview, setGeneratedPreview] = useState('');
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
+  const [isOnline, setIsOnline] = useState(() => typeof navigator === 'undefined' ? true : navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    const savedTone = window.localStorage.getItem('astrix-tone-sample');
+    if (savedTone) setToneSample(savedTone);
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem('astrix-tone-sample', toneSample);
+  }, [toneSample]);
 
   // Invoice filter
   const [invoiceFilter, setInvoiceFilter] = useState<'all' | 'pending' | 'paused' | 'paid'>('all');
@@ -181,7 +202,7 @@ export const Dashboard = () => {
   return (
     <AppLayout 
       title={`Welcome back, ${firstName}.`} 
-      subtitle="Here's your revenue recovery overview."
+      subtitle="Track what is owed, what is moving, and what Astrix recovered."
       actions={
         <button
           onClick={() => window.dispatchEvent(new CustomEvent('open-upload-modal'))}
@@ -191,6 +212,13 @@ export const Dashboard = () => {
         </button>
       }
     >
+      {!isOnline && (
+        <div role="status" className="mb-6 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+          <WifiOff className="h-4 w-4 shrink-0" />
+          You&apos;re offline. Your workspace is safe locally; changes will sync when you reconnect.
+        </div>
+      )}
+
       {/* Tab Navigation */}
       <div className="flex gap-1.5 mb-8 bg-white border border-gray-200 rounded-2xl p-1.5 shadow-sm overflow-x-auto hide-scrollbar">
         {tabs.map(tab => (

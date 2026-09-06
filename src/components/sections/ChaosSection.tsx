@@ -33,9 +33,9 @@ export const ChaosSection = () => {
 
   const problems = [
     { num: "01", title: "Awkward Follow-ups", desc: "You did the work, but asking for payment feels uncomfortable." },
-    { num: "02", title: "Inconsistent Tracking", desc: "Invoices scattered across emails, spreadsheets, and tools." },
-    { num: "03", title: "No Paper Trail", desc: "Clients ghost you, and you have no record of reminders sent." },
-    { num: "04", title: "Manual Brutality", desc: "Writing the same follow-up emails over and over steals your time." }
+    { num: "02", title: "Scattered Invoices", desc: "Overdue work gets buried across email threads, spreadsheets, and payment tools." },
+    { num: "03", title: "Silent Ghosting", desc: "Clients go quiet and you lose the context of what was sent, when, and why." },
+    { num: "04", title: "Manual Chasing", desc: "Writing every reminder yourself steals the time you should spend on paid work." }
   ];
 
   return (

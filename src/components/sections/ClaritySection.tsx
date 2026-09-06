@@ -20,7 +20,7 @@ export const ClaritySection = () => {
             <span className="text-brand-blue">To Paid.</span>
           </h2>
           <p className="text-lg md:text-xl text-gray-600 max-w-md font-medium">
-            The complete recovery loop. Astrix tracks your invoices, clones your voice, sends reminders, and confirms when you get paid.
+            One calm recovery loop. Astrix tracks overdue invoices, writes in your voice, sends the right reminder, and stops the moment payment lands.
           </p>
         </div>
 
