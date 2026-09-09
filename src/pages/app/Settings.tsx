@@ -1,593 +1,306 @@
-import React, { useState, useEffect } from 'react';
+'use client';
+
+import React, { useState } from 'react';
 import { AppLayout } from '../../layouts/AppLayout';
-import {
-  CreditCard, Loader2, Trash2, Plus, X,
-  Mail, DollarSign, TrendingUp, Clock, AlertCircle,
-  CheckCircle2, Volume2, Sliders, Eye, Copy,
-  ShieldCheck, Zap, Activity, Bot, Settings as SettingsIcon
-} from 'lucide-react';
-import { useToast } from '../../contexts/ToastContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { Link } from 'react-router-dom';
+import { useToast } from '../../contexts/ToastContext';
+import { 
+  User, Bell, CreditCard, ShieldAlert, Sparkles, 
+  AlertTriangle, LogOut, Trash2
+} from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
-interface Invoice {
-  id: string;
-  client_name: string;
-  client_email: string;
-  amount: number;
-  currency: string;
-  due_date: string;
-  status: 'pending' | 'paid' | 'paused' | 'disputed';
-  ai_status: 'nudge_sent' | 'escalated' | 'pending' | 'paid';
-  days_overdue: number;
-  reminder_count: number;
-}
-
-interface ActivityItem {
-  id: string;
-  type: 'nudge_sent' | 'payment_received' | 'escalated' | 'invoice_created';
-  message: string;
-  timestamp: string;
-  amount?: number;
-}
-
-interface DashboardMetrics {
-  total_recovered: number;
-  currently_outstanding: number;
-  active_chases: number;
-  recovery_rate: number;
-  pending_invoices: number;
-  this_month_recovered: number;
-}
-
-const MOCK_INVOICES: Invoice[] = [
-  { id: '1', client_name: 'Acme Corp', client_email: 'billing@acme.com', amount: 2400, currency: 'USD', due_date: '2025-01-01', status: 'pending', days_overdue: 14, ai_status: 'nudge_sent', reminder_count: 2 },
-  { id: '2', client_name: 'TechStart GmbH', client_email: 'finance@techstart.de', amount: 1800, currency: 'EUR', due_date: '2024-12-28', status: 'pending', days_overdue: 18, ai_status: 'escalated', reminder_count: 3 },
-  { id: '3', client_name: 'DataFlow Ltd', client_email: 'accounts@dataflow.co', amount: 890, currency: 'USD', due_date: '2025-01-05', status: 'pending', days_overdue: 10, ai_status: 'pending', reminder_count: 0 },
-  { id: '4', client_name: 'InnovateLab', client_email: 'pay@innovatelab.com', amount: 1500, currency: 'USD', due_date: '2024-12-15', status: 'paid', days_overdue: 0, ai_status: 'paid', reminder_count: 1 },
-  { id: '5', client_name: 'CloudScale Inc', client_email: 'ap@cloudscale.io', amount: 3200, currency: 'USD', due_date: '2024-12-20', status: 'paused', days_overdue: 25, ai_status: 'nudge_sent', reminder_count: 2 },
-];
-
-const MOCK_ACTIVITIES: ActivityItem[] = [
-  { id: '1', type: 'nudge_sent', message: 'AI sent a friendly nudge to Acme Corp for Invoice #1042', timestamp: '2 hours ago', amount: 2400 },
-  { id: '2', type: 'payment_received', message: 'Payment received from InnovateLab — Invoice #1039 cleared', timestamp: '5 hours ago', amount: 1500 },
-  { id: '3', type: 'escalated', message: 'AI escalated TechStart GmbH to Level 2 (Firm tone)', timestamp: '1 day ago' },
-  { id: '4', type: 'invoice_created', message: 'New invoice added for DataFlow Ltd', timestamp: '2 days ago', amount: 890 },
-  { id: '5', type: 'nudge_sent', message: 'AI sent 2nd reminder to CloudScale Inc', timestamp: '3 days ago', amount: 3200 },
-];
-
-const MOCK_METRICS: DashboardMetrics = {
-  total_recovered: 47200,
-  currently_outstanding: 8290,
-  active_chases: 3,
-  recovery_rate: 94,
-  pending_invoices: 4,
-  this_month_recovered: 12400
-};
-
-type TabId = 'overview' | 'action-center' | 'tone-studio' | 'settings';
+type SettingsTab = 'profile' | 'billing' | 'notifications' | 'agency' | 'danger';
 
 export const Settings = () => {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { addToast } = useToast();
+  const router = useRouter();
 
-  const [activeTab, setActiveTab] = useState<TabId>('overview');
-  const [isLoading, setIsLoading] = useState(true);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [activities] = useState<ActivityItem[]>(MOCK_ACTIVITIES);
-  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
+  const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  // Action Center
-  const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'paid' | 'paused'>('all');
+  const fullName = user?.user_metadata?.full_name || 'User';
+  const email = user?.email || 'user@example.com';
+  const initials = fullName.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase();
 
-  // Tone Studio
-  const [sampleEmails, setSampleEmails] = useState('');
-  const [toneLevel, setToneLevel] = useState(2);
-  const [generatedPreview, setGeneratedPreview] = useState('');
-  const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
-
-  // Settings
-  const [connectedGateways] = useState<string[]>(['stripe']);
-  const [showAddGateway, setShowAddGateway] = useState(false);
-  const [notifPrefs, setNotifPrefs] = useState({
-    payment_received: true,
-    nudge_sent: true,
-    payment_failed: true,
-    weekly_summary: false,
-  });
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setInvoices(MOCK_INVOICES);
-      setMetrics(MOCK_METRICS);
-      setIsLoading(false);
-    }, 600);
-    return () => clearTimeout(timer);
-  }, []);
-
-  const formatCurrency = (value: number, currency = 'USD') => {
-    if (value >= 1000) return `$${(value / 1000).toFixed(1)}k`;
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency, maximumFractionDigits: 0 }).format(value);
+  const handleSignOut = async () => {
+    await signOut();
+    router.push('/login');
   };
 
-  const handlePauseAI = (id: string) => {
-    setInvoices(prev => prev.map(inv =>
-      inv.id === id ? { ...inv, status: inv.status === 'paused' ? 'pending' as const : 'paused' as const } : inv
-    ));
-    const inv = invoices.find(i => i.id === id);
-    addToast(inv?.status === 'paused' ? 'AI resumed for this invoice.' : 'AI paused. You can resume anytime.', 'success');
-  };
-
-  const handleGeneratePreview = () => {
-    if (!sampleEmails.trim()) { addToast('Paste a sample email first.', 'warning'); return; }
-    setIsGeneratingPreview(true);
-    setTimeout(() => {
-      const previews: Record<number, string> = {
-        1: `Hey Sarah!\n\nHope you're doing well 😊 Just a quick nudge — Invoice #1042 for $2,400 was due Jan 1st. No stress, but whenever you get a moment:\n\npay.astrix.ai/1042\n\nThanks so much! Really appreciate working with you.`,
-        2: `Hi Sarah,\n\nFollowing up on Invoice #1042 ($2,400) — now 14 days past due. Could you process this at your earliest convenience?\n\npay.astrix.ai/1042\n\nLet me know if any questions.\n\nBest regards`,
-        3: `Sarah,\n\nThis is my third follow-up on Invoice #1042 — $2,400, 14 days overdue.\n\nPlease settle this today: pay.astrix.ai/1042\n\nIf payment is not received within 48 hours, I will need to explore further options.\n\nRegards`,
-      };
-      setGeneratedPreview(previews[toneLevel]);
-      setIsGeneratingPreview(false);
-    }, 1500);
-  };
-
-  const getStatusBadge = (status: Invoice['status'], aiStatus: Invoice['ai_status']) => {
-    if (status === 'paid') return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-green-100 text-green-700 border border-green-200 whitespace-nowrap"><CheckCircle2 className="w-3 h-3" /> Paid</span>;
-    if (status === 'paused') return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-gray-100 text-gray-600 border border-gray-200 whitespace-nowrap">⏸ AI Paused</span>;
-    if (status === 'disputed') return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-orange-100 text-orange-700 border border-orange-200 whitespace-nowrap"><AlertCircle className="w-3 h-3" /> Disputed</span>;
-    switch (aiStatus) {
-      case 'nudge_sent': return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-100 text-blue-700 border border-blue-200 whitespace-nowrap">📤 Nudge Sent</span>;
-      case 'escalated': return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-purple-100 text-purple-700 border border-purple-200 whitespace-nowrap"><TrendingUp className="w-3 h-3" /> Escalated</span>;
-      default: return <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-yellow-100 text-yellow-700 border border-yellow-200 whitespace-nowrap"><Clock className="w-3 h-3" /> Queued</span>;
+  const handleDeleteAccount = () => {
+    if (window.confirm("Are you absolutely sure you want to delete your account? This action cannot be undone and all data will be lost.")) {
+      setIsDeleting(true);
+      setTimeout(() => {
+        addToast("Account deletion mockup. (Backend not connected)", "success");
+        setIsDeleting(false);
+      }, 1500);
     }
   };
 
-  const filteredInvoices = invoices.filter(inv => filterStatus === 'all' || inv.status === filterStatus);
+  const handleManageSubscription = () => {
+    addToast("Redirecting to Stripe Billing Portal... (Mockup)", "success");
+  };
 
-  const tabs: { id: TabId; name: string; icon: React.ComponentType<{ className?: string }> }[] = [
-    { id: 'overview', name: 'Overview', icon: DollarSign },
-    { id: 'action-center', name: 'Action Center', icon: Activity },
-    { id: 'tone-studio', name: 'Tone Studio', icon: Bot },
-    { id: 'settings', name: 'Settings', icon: SettingsIcon },
-  ];
+  const TABS = [
+    { id: 'profile', label: 'Profile', icon: User },
+    { id: 'billing', label: 'Billing & Plan', icon: CreditCard },
+    { id: 'notifications', label: 'Notifications', icon: Bell },
+    { id: 'agency', label: 'Team & Agency', icon: Sparkles, color: 'text-brand-blue hover:bg-blue-50 hover:text-blue-700' },
+    { id: 'danger', label: 'Danger Zone', icon: ShieldAlert, color: 'text-red-500 hover:bg-red-50 hover:text-red-600' },
+  ] as const;
 
   return (
-    <AppLayout title="Dashboard" subtitle="Revenue recovery overview">
+    <AppLayout 
+      title="Settings" 
+      subtitle="Manage your account, billing, and preferences."
+    >
+      <div className="flex flex-col md:flex-row gap-8 animate-[fadeIn_0.3s_ease-out]">
+        
+        {/* Settings Sidebar */}
+        <div className="w-full md:w-64 shrink-0">
+          <nav className="space-y-1 bg-white border border-gray-200 rounded-2xl p-2 shadow-sm">
+            {TABS.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as SettingsTab)}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${
+                  activeTab === tab.id 
+                    ? tab.id === 'danger' ? 'bg-red-50 text-red-600' : 'bg-gray-900 text-white shadow-sm'
+                    : (tab as any).color || 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`}
+              >
+                <tab.icon className="w-4 h-4 shrink-0" />
+                {tab.label}
+              </button>
+            ))}
+          </nav>
 
-      {/* Tab Navigation */}
-      <div className="flex gap-1.5 mb-8 bg-white border border-gray-200 rounded-2xl p-1.5 shadow-sm overflow-x-auto hide-scrollbar">
-        {tabs.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap flex-1 justify-center ${
-              activeTab === tab.id
-                ? 'bg-gray-900 text-white shadow-sm'
-                : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
-            }`}
-          >
-            <tab.icon className="w-4 h-4" />
-            <span className="hidden sm:inline">{tab.name}</span>
-          </button>
-        ))}
-      </div>
-
-      {isLoading ? (
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="w-8 h-8 animate-spin text-astrix-teal" />
+          <div className="mt-6 bg-white border border-gray-200 rounded-2xl p-4 shadow-sm flex items-center gap-4">
+            <div className="w-10 h-10 rounded-full bg-astrix-teal/20 border border-astrix-teal/30 flex items-center justify-center text-astrix-teal font-bold text-sm shrink-0">
+              {initials}
+            </div>
+            <div className="min-w-0">
+              <div className="text-sm font-bold text-gray-900 truncate">{fullName}</div>
+              <div className="text-xs text-gray-500 truncate">{email}</div>
+            </div>
+          </div>
         </div>
-      ) : (
-        <>
-          {/* ═══════════ OVERVIEW TAB ═══════════ */}
-          {activeTab === 'overview' && (
-            <div className="space-y-6 animate-[fadeIn_0.3s_ease-out]">
-              {/* Metrics */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
-                  <div className="absolute -right-4 -top-4 w-20 h-20 bg-green-50 rounded-full opacity-60 group-hover:opacity-100 transition-opacity"></div>
-                  <div className="relative z-10">
-                    <div className="flex items-center gap-2 mb-3"><div className="p-1.5 bg-green-100 rounded-lg"><DollarSign className="w-4 h-4 text-green-600" /></div><span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Total Recovered</span></div>
-                    <div className="text-3xl font-heading font-black text-gray-900">{formatCurrency(metrics?.total_recovered || 0)}</div>
-                    <div className="text-xs text-green-600 font-bold mt-2 flex items-center gap-1"><TrendingUp className="w-3 h-3" /> +{formatCurrency(metrics?.this_month_recovered || 0)} this month</div>
-                  </div>
-                </div>
-                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
-                  <div className="absolute -right-4 -top-4 w-20 h-20 bg-red-50 rounded-full opacity-60 group-hover:opacity-100 transition-opacity"></div>
-                  <div className="relative z-10">
-                    <div className="flex items-center gap-2 mb-3"><div className="p-1.5 bg-red-100 rounded-lg"><AlertCircle className="w-4 h-4 text-red-500" /></div><span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Outstanding</span></div>
-                    <div className="text-3xl font-heading font-black text-gray-900">{formatCurrency(metrics?.currently_outstanding || 0)}</div>
-                    <div className="text-xs text-gray-500 font-bold mt-2">{metrics?.pending_invoices} invoices pending</div>
-                  </div>
-                </div>
-                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
-                  <div className="absolute -right-4 -top-4 w-20 h-20 bg-teal-50 rounded-full opacity-60 group-hover:opacity-100 transition-opacity"></div>
-                  <div className="relative z-10">
-                    <div className="flex items-center gap-2 mb-3"><div className="p-1.5 bg-teal-100 rounded-lg"><Zap className="w-4 h-4 text-astrix-teal" /></div><span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Recovery Rate</span></div>
-                    <div className="text-3xl font-heading font-black text-astrix-teal">{metrics?.recovery_rate}%</div>
-                    <div className="mt-2 w-full bg-gray-100 rounded-full h-1.5"><div className="bg-astrix-teal h-1.5 rounded-full" style={{ width: `${metrics?.recovery_rate}%` }}></div></div>
-                  </div>
-                </div>
-                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all group relative overflow-hidden">
-                  <div className="absolute -right-4 -top-4 w-20 h-20 bg-blue-50 rounded-full opacity-60 group-hover:opacity-100 transition-opacity"></div>
-                  <div className="relative z-10">
-                    <div className="flex items-center gap-2 mb-3"><div className="p-1.5 bg-blue-100 rounded-lg"><Activity className="w-4 h-4 text-brand-blue" /></div><span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Active Chases</span></div>
-                    <div className="text-3xl font-heading font-black text-gray-900">{metrics?.active_chases}</div>
-                    <div className="text-xs text-brand-blue font-bold mt-2 flex items-center gap-1"><Bot className="w-3 h-3" /> AI running autonomously</div>
-                  </div>
-                </div>
+
+        {/* Settings Content */}
+        <div className="flex-1 min-w-0 space-y-6">
+          
+          {/* PROFILE */}
+          {activeTab === 'profile' && (
+            <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+              <div className="px-6 py-5 border-b border-gray-100">
+                <h2 className="font-heading text-lg font-bold text-gray-900">Profile Information</h2>
+                <p className="text-sm text-gray-500 mt-1">Update your personal and business details.</p>
               </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                {/* Activity Feed */}
-                <div className="lg:col-span-3 bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-                  <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                    <h2 className="font-heading text-base font-bold text-gray-900 flex items-center gap-2"><Activity className="w-4 h-4 text-brand-blue" /> Activity Feed</h2>
-                    <span className="flex items-center gap-1.5 text-xs font-bold text-green-600"><span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Live</span>
+              <div className="p-6 space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-900 mb-2">Full Name</label>
+                    <input type="text" defaultValue={fullName} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-blue transition-all" />
                   </div>
-                  <div className="divide-y divide-gray-50 max-h-[360px] overflow-y-auto">
-                    {activities.map(act => (
-                      <div key={act.id} className="flex items-start gap-4 px-6 py-4 hover:bg-gray-50 transition-colors">
-                        <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-sm ${act.type === 'payment_received' ? 'bg-green-100' : act.type === 'nudge_sent' ? 'bg-blue-100' : act.type === 'escalated' ? 'bg-purple-100' : 'bg-gray-100'}`}>
-                          {act.type === 'payment_received' ? '💰' : act.type === 'nudge_sent' ? '📤' : act.type === 'escalated' ? '📈' : '📄'}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm text-gray-900 font-medium leading-snug">{act.message}</p>
-                          <div className="flex items-center gap-3 mt-1">
-                            <span className="text-xs text-gray-400">{act.timestamp}</span>
-                            {act.amount && <span className="text-xs font-bold text-gray-600">{formatCurrency(act.amount)}</span>}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                  <div>
+                    <label className="block text-sm font-bold text-gray-900 mb-2">Email Address</label>
+                    <input type="email" defaultValue={email} disabled className="w-full bg-gray-100 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-500 outline-none cursor-not-allowed" />
                   </div>
                 </div>
-
-                {/* Right Panel */}
-                <div className="lg:col-span-2 space-y-4">
-                  <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-28 h-28 bg-astrix-teal/10 rounded-full blur-2xl"></div>
-                    <div className="relative z-10">
-                      <div className="flex items-center gap-1.5 mb-3">
-                        <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
-                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Daily Chase Engine</span>
-                      </div>
-                      <h3 className="font-heading text-lg font-bold text-white mb-1">AI Running Autonomously</h3>
-                      <p className="text-sm text-gray-400 mb-4">Next batch: Tomorrow 09:00 AM UTC</p>
-                      <div className="space-y-2 text-xs font-mono">
-                        <div className="flex justify-between text-gray-500"><span>Last run</span><span className="text-white font-bold">Today 9:00 AM</span></div>
-                        <div className="flex justify-between text-gray-500"><span>Reminders sent</span><span className="text-green-400 font-bold">3 today</span></div>
-                        <div className="flex justify-between text-gray-500"><span>Guardrail</span><span className="text-astrix-teal font-bold">3-5 day gap active</span></div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
-                    <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-4">Quick Actions</h3>
-                    <div className="space-y-2">
-                      <button onClick={() => setActiveTab('action-center')} className="w-full flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors text-left group">
-                        <div className="p-1.5 bg-blue-100 rounded-lg"><Activity className="w-4 h-4 text-brand-blue" /></div>
-                        <div><div className="text-sm font-bold text-gray-900">View Invoices</div><div className="text-[11px] text-gray-400">Manage all invoices</div></div>
-                      </button>
-                      <button onClick={() => setActiveTab('tone-studio')} className="w-full flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors text-left group">
-                        <div className="p-1.5 bg-purple-100 rounded-lg"><Bot className="w-4 h-4 text-purple-600" /></div>
-                        <div><div className="text-sm font-bold text-gray-900">Train AI Tone</div><div className="text-[11px] text-gray-400">Customize your voice</div></div>
-                      </button>
-                      <button onClick={() => setActiveTab('settings')} className="w-full flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors text-left group">
-                        <div className="p-1.5 bg-green-100 rounded-lg"><CreditCard className="w-4 h-4 text-green-600" /></div>
-                        <div><div className="text-sm font-bold text-gray-900">Connect Gateway</div><div className="text-[11px] text-gray-400">Stripe, Razorpay, UPI</div></div>
-                      </button>
-                    </div>
-                  </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-900 mb-2">Business Name</label>
+                  <input type="text" placeholder="e.g. Acme Design Studio" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-blue transition-all" />
+                </div>
+                <div className="flex justify-end pt-4">
+                  <button onClick={() => addToast('Profile updated!', 'success')} className="bg-gray-900 text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-black transition-colors shadow-sm">
+                    Save Changes
+                  </button>
                 </div>
               </div>
             </div>
           )}
 
-          {/* ═══════════ ACTION CENTER TAB ═══════════ */}
-          {activeTab === 'action-center' && (
-            <div className="space-y-6 animate-[fadeIn_0.3s_ease-out]">
-              {/* Stats Strip */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {[
-                  { label: 'All', count: invoices.length, filter: 'all' as const },
-                  { label: 'Pending', count: invoices.filter(i => i.status === 'pending').length, filter: 'pending' as const },
-                  { label: 'Paused', count: invoices.filter(i => i.status === 'paused').length, filter: 'paused' as const },
-                  { label: 'Paid', count: invoices.filter(i => i.status === 'paid').length, filter: 'paid' as const },
-                ].map(stat => (
-                  <button
-                    key={stat.label}
-                    onClick={() => setFilterStatus(stat.filter)}
-                    className={`p-4 rounded-2xl text-left transition-all bg-white border ${filterStatus === stat.filter ? 'border-astrix-teal ring-2 ring-astrix-teal ring-offset-2' : 'border-gray-200 hover:border-gray-300'}`}
-                  >
-                    <div className="text-2xl font-heading font-black text-gray-900">{stat.count}</div>
-                    <div className="text-xs font-bold text-gray-500">{stat.label}</div>
+          {/* BILLING */}
+          {activeTab === 'billing' && (
+            <div className="space-y-6">
+              <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-2xl shadow-xl overflow-hidden relative">
+                <div className="absolute right-0 top-0 h-full w-48 bg-gradient-to-l from-brand-blue/20 to-transparent"></div>
+                <div className="p-6 md:p-8 relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Sparkles className="w-5 h-5 text-brand-yellow" />
+                      <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Current Plan</span>
+                    </div>
+                    <h2 className="font-heading text-3xl font-black text-white mb-2">Hook � Free Tier</h2>
+                    <p className="text-gray-400 text-sm">3 free automated recoveries per month. (0 remaining this month)</p>
+                  </div>
+                  <button onClick={() => router.push('/pricing')} className="w-full md:w-auto bg-brand-blue text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg text-sm whitespace-nowrap">
+                    Upgrade to Solo � $29/mo
                   </button>
+                </div>
+              </div>
+
+              <div className="bg-white border border-gray-200 rounded-2xl shadow-sm">
+                <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+                  <div>
+                    <h2 className="font-heading text-lg font-bold text-gray-900">Subscription & Billing</h2>
+                    <p className="text-sm text-gray-500 mt-1">Manage your active subscription and payment methods.</p>
+                  </div>
+                </div>
+                <div className="p-6">
+                  <button 
+                    onClick={handleManageSubscription}
+                    className="flex items-center gap-2 text-sm font-bold text-brand-blue hover:text-blue-700 transition-colors bg-blue-50 hover:bg-blue-100 px-4 py-2.5 rounded-xl"
+                  >
+                    <CreditCard className="w-4 h-4" /> Manage Billing
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* NOTIFICATIONS */}
+          {activeTab === 'notifications' && (
+            <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+              <div className="px-6 py-5 border-b border-gray-100">
+                <h2 className="font-heading text-lg font-bold text-gray-900">Notification Preferences</h2>
+                <p className="text-sm text-gray-500 mt-1">Control how and when we alert you.</p>
+              </div>
+              <div className="p-6 space-y-4">
+                {[
+                  { label: 'Payment received alert', desc: 'Get notified instantly when a client pays via 1-Click Checkout.', checked: true },
+                  { label: 'AI Reminder sent confirmation', desc: 'Daily digest of emails the AI sent on your behalf.', checked: true },
+                  { label: 'Invoice dispute alert', desc: 'If a client replies to a reminder with a dispute or question.', checked: true },
+                  { label: 'Weekly recovery summary', desc: 'A Monday morning report of your metrics.', checked: false },
+                ].map((item, i) => (
+                  <div key={i} className="flex items-start justify-between p-4 bg-gray-50 rounded-xl border border-gray-100 hover:border-gray-200 transition-colors cursor-pointer group">
+                    <div className="pr-4">
+                      <h4 className="text-sm font-bold text-gray-900 group-hover:text-brand-blue transition-colors">{item.label}</h4>
+                      <p className="text-xs text-gray-500 mt-1">{item.desc}</p>
+                    </div>
+                    <div className="pt-1">
+                      <div className={`w-10 h-6 rounded-full transition-colors flex items-center px-1 ${item.checked ? 'bg-green-500' : 'bg-gray-300'}`}>
+                        <div className={`w-4 h-4 rounded-full bg-white transition-transform ${item.checked ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                      </div>
+                    </div>
+                  </div>
                 ))}
               </div>
+            </div>
+          )}
 
-              {/* Invoice Table - Desktop */}
-              <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-gray-50">
-                  <h2 className="font-heading text-base font-bold text-gray-900">Overdue Invoices</h2>
-                  <button onClick={() => window.dispatchEvent(new CustomEvent('open-upload-modal'))} className="flex items-center gap-2 bg-astrix-teal text-white px-3 py-2 rounded-lg text-xs font-bold hover:bg-astrix-darkTeal">
-                    <Plus className="w-3.5 h-3.5" /> Add Invoice
+          {/* TEAM & AGENCY */}
+          {activeTab === 'agency' && (
+            <div className="space-y-6">
+              <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden relative">
+                {/* Lock Overlay for non-agency plans */}
+                <div className="absolute inset-0 bg-white/40 z-10 flex flex-col items-center justify-center p-6 text-center">
+                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4 shadow-sm border border-blue-200">
+                    <Sparkles className="w-6 h-6 text-brand-blue" />
+                  </div>
+                  <h3 className="text-xl font-heading font-bold text-gray-900 mb-2">Agency Features Locked</h3>
+                  <p className="text-sm text-gray-600 max-w-md mb-6">Upgrade to the Agency plan to invite team members, setup custom domains, and configure white-label branding.</p>
+                  <button onClick={() => router.push('/pricing')} className="bg-brand-blue text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-blue-700 transition-colors shadow-sm">
+                    Upgrade to Agency
                   </button>
                 </div>
 
-                {/* Desktop */}
-                <div className="hidden md:block overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="border-b border-gray-100">
-                      <tr>
-                        {['Client', 'Amount', 'Due Date', 'Overdue', 'AI Status', 'Reminders', 'Actions'].map(h => (
-                          <th key={h} className="p-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-widest">{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-50">
-                      {filteredInvoices.map(inv => (
-                        <tr key={inv.id} className="hover:bg-gray-50/50 transition-colors">
-                          <td className="p-4">
-                            <div className="font-bold text-gray-900">{inv.client_name}</div>
-                            <div className="text-xs text-gray-400">{inv.client_email}</div>
-                          </td>
-                          <td className="p-4"><span className="font-bold text-gray-900 font-mono">{formatCurrency(inv.amount, inv.currency)}</span></td>
-                          <td className="p-4"><span className="text-gray-600">{new Date(inv.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span></td>
-                          <td className="p-4">
-                            {inv.days_overdue > 0
-                              ? <span className={`font-bold text-sm ${inv.days_overdue > 14 ? 'text-red-600' : 'text-orange-500'}`}>{inv.days_overdue}d</span>
-                              : <span className="text-green-600 font-bold">—</span>
-                            }
-                          </td>
-                          <td className="p-4">{getStatusBadge(inv.status, inv.ai_status)}</td>
-                          <td className="p-4"><span className="font-mono font-bold text-gray-600">{inv.reminder_count}</span></td>
-                          <td className="p-4">
-                            {inv.status !== 'paid' && (
-                              <button
-                                onClick={() => handlePauseAI(inv.id)}
-                                aria-label={inv.status === 'paused' ? `Resume AI for ${inv.client_name}` : `Pause AI for ${inv.client_name}`}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${inv.status === 'paused' ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-                              >
-                                {inv.status === 'paused' ? '▶ Resume' : '⏸ Pause AI'}
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="px-6 py-5 border-b border-gray-100 select-none">
+                  <h2 className="font-heading text-lg font-bold text-gray-900">Team & Agency Settings</h2>
+                  <p className="text-sm text-gray-500 mt-1">Manage your team members and white-label branding.</p>
                 </div>
-
-                {/* Mobile Cards */}
-                <div className="md:hidden divide-y divide-gray-100">
-                  {filteredInvoices.map(inv => (
-                    <div key={inv.id} className="p-4 space-y-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <div className="font-bold text-gray-900">{inv.client_name}</div>
-                          <div className="text-xs text-gray-400">{inv.client_email}</div>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-bold font-mono text-gray-900">{formatCurrency(inv.amount)}</div>
-                          {inv.days_overdue > 0 && <div className={`text-xs font-bold ${inv.days_overdue > 14 ? 'text-red-600' : 'text-orange-500'}`}>{inv.days_overdue}d overdue</div>}
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        {getStatusBadge(inv.status, inv.ai_status)}
-                        {inv.status !== 'paid' && (
-                          <button onClick={() => handlePauseAI(inv.id)} className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold ${inv.status === 'paused' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                            {inv.status === 'paused' ? '▶ Resume' : '⏸ Pause'}
-                          </button>
-                        )}
-                      </div>
+                
+                <div className="p-6 space-y-8 select-none pointer-events-none">
+                  {/* Invite Team */}
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-900 mb-3">Invite Team Members</h3>
+                    <div className="flex gap-3">
+                      <input type="email" placeholder="colleague@agency.com" className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none" disabled />
+                      <button className="bg-gray-900 text-white px-6 py-2.5 rounded-xl font-bold text-sm" disabled>Send Invite</button>
                     </div>
-                  ))}
-                </div>
-
-                {filteredInvoices.length === 0 && (
-                  <div className="flex flex-col items-center justify-center py-16 text-center px-6">
-                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <CheckCircle2 className="w-8 h-8 text-green-600" />
-                    </div>
-                    <h3 className="font-heading text-lg font-bold text-gray-900 mb-1">All clear!</h3>
-                    <p className="text-sm text-gray-500">No {filterStatus !== 'all' ? filterStatus : ''} invoices found.</p>
                   </div>
-                )}
+
+                  <hr className="border-gray-100" />
+
+                  {/* White-Label Domain */}
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-900 mb-3">White-Label Domain</h3>
+                    <p className="text-xs text-gray-500 mb-3">Serve payment links and client dashboards from your own domain.</p>
+                    <div className="flex gap-3">
+                      <input type="text" placeholder="e.g. payments.youragency.com" className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none" disabled />
+                      <button className="bg-gray-900 text-white px-6 py-2.5 rounded-xl font-bold text-sm" disabled>Verify Domain</button>
+                    </div>
+                  </div>
+
+                  <hr className="border-gray-100" />
+
+                  {/* Custom Branding */}
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-900 mb-3">Custom Branding</h3>
+                    <p className="text-xs text-gray-500 mb-4">Upload your agency logo and set your primary brand color.</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 flex flex-col items-center justify-center gap-2">
+                        <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center"><Sparkles className="w-5 h-5 text-gray-400" /></div>
+                        <span className="text-xs font-bold text-gray-500">Upload Logo</span>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-900 mb-2">Brand Color (Hex)</label>
+                        <input type="text" defaultValue="#000000" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none font-mono" disabled />
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
               </div>
             </div>
           )}
 
-          {/* ═══════════ TONE STUDIO TAB ═══════════ */}
-          {activeTab === 'tone-studio' && (
-            <div className="space-y-6 animate-[fadeIn_0.3s_ease-out]">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Left: Training Input */}
-                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-                  <h2 className="font-heading text-lg font-bold text-gray-900 mb-1">AI Tone Training</h2>
-                  <p className="text-sm text-gray-500 mb-6">Paste 2–3 of your typical client emails. AI learns your writing style.</p>
-                  <div className="space-y-5">
+          {/* DANGER ZONE */}
+          {activeTab === 'danger' && (
+            <div className="space-y-6">
+              <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+                <div className="px-6 py-5 border-b border-gray-100">
+                  <h2 className="font-heading text-lg font-bold text-gray-900">Danger Zone</h2>
+                  <p className="text-sm text-gray-500 mt-1">Irreversible and destructive actions.</p>
+                </div>
+                <div className="p-6 space-y-6">
+                  
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 bg-red-50 border border-red-100 rounded-xl">
                     <div>
-                      <label className="block text-sm font-bold text-gray-900 mb-2">Sample Email(s)</label>
-                      <textarea
-                        value={sampleEmails}
-                        onChange={e => setSampleEmails(e.target.value)}
-                        placeholder="Paste a typical email you'd send to a client about payment..."
-                        className="w-full bg-gray-50 border border-gray-200 rounded-xl p-4 text-sm outline-none focus:ring-2 focus:ring-brand-blue resize-none h-36"
-                      />
+                      <h4 className="text-sm font-bold text-red-900 flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4" /> Delete Account
+                      </h4>
+                      <p className="text-xs text-red-700 mt-1">Permanently delete your account, all invoices, and AI training data. This cannot be undone.</p>
                     </div>
-                    <div>
-                      <label className="block text-sm font-bold text-gray-900 mb-3">
-                        Tone Level — <span className="text-brand-blue">Level {toneLevel}</span>
-                        <span className="ml-2 text-gray-400 font-normal">({toneLevel === 1 ? 'Friendly 😊' : toneLevel === 2 ? 'Balanced 📧' : 'Firm 📋'})</span>
-                      </label>
-                      <div className="grid grid-cols-3 gap-3">
-                        {[
-                          { level: 1, label: 'Friendly', emoji: '😊', desc: 'Warm & casual' },
-                          { level: 2, label: 'Balanced', emoji: '📧', desc: 'Professional' },
-                          { level: 3, label: 'Firm', emoji: '📋', desc: 'Assertive & direct' },
-                        ].map(opt => (
-                          <button key={opt.level} onClick={() => setToneLevel(opt.level)} className={`p-3 rounded-xl text-sm font-bold transition-all border ${toneLevel === opt.level ? 'bg-brand-blue text-white border-brand-blue shadow-sm' : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-gray-300'}`}>
-                            <div className="text-lg mb-1">{opt.emoji}</div>
-                            <div>{opt.label}</div>
-                            <div className={`text-[10px] font-normal mt-0.5 ${toneLevel === opt.level ? 'text-blue-100' : 'text-gray-400'}`}>{opt.desc}</div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <button onClick={handleGeneratePreview} disabled={isGeneratingPreview || !sampleEmails.trim()} className="w-full bg-gray-900 text-white py-3.5 rounded-xl font-bold hover:bg-black disabled:opacity-50 transition-colors flex items-center justify-center gap-2 text-sm">
-                      {isGeneratingPreview ? <><Loader2 className="w-4 h-4 animate-spin" /> Generating...</> : <><Eye className="w-4 h-4" /> Generate Preview</>}
+                    <button 
+                      onClick={handleDeleteAccount}
+                      disabled={isDeleting}
+                      className="bg-red-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-red-700 transition-colors whitespace-nowrap disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {isDeleting ? 'Deleting...' : <><Trash2 className="w-4 h-4" /> Delete Account</>}
                     </button>
                   </div>
-                </div>
 
-                {/* Right: Preview Output */}
-                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm flex flex-col">
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="font-heading text-lg font-bold text-gray-900">AI-Generated Preview</h2>
-                    {generatedPreview && (
-                      <button onClick={() => { navigator.clipboard.writeText(generatedPreview); addToast('Copied!', 'success'); }} className="text-xs font-bold text-brand-blue hover:underline flex items-center gap-1">
-                        <Copy className="w-3.5 h-3.5" /> Copy
-                      </button>
-                    )}
+                  <div className="border-t border-gray-100 pt-6">
+                    <button 
+                      onClick={handleSignOut}
+                      className="flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-gray-900 transition-colors bg-gray-100 hover:bg-gray-200 px-5 py-2.5 rounded-xl w-full sm:w-auto justify-center"
+                    >
+                      <LogOut className="w-4 h-4" /> Sign Out of all devices
+                    </button>
                   </div>
-                  {generatedPreview ? (
-                    <div className="flex-1 space-y-4">
-                      <div className="flex gap-2 flex-wrap">
-                        <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${toneLevel === 1 ? 'bg-green-100 text-green-700' : toneLevel === 2 ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
-                          Level {toneLevel} — {toneLevel === 1 ? 'Friendly' : toneLevel === 2 ? 'Balanced' : 'Firm'}
-                        </span>
-                        <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-purple-100 text-purple-700">Your Voice Cloned</span>
-                      </div>
-                      <div className="bg-gray-50 border border-gray-200 rounded-xl p-5 text-sm text-gray-800 whitespace-pre-wrap leading-relaxed font-medium flex-1 min-h-[200px]">
-                        {generatedPreview}
-                      </div>
-                      <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl">
-                        <div className="flex items-start gap-3">
-                          <Zap className="w-5 h-5 text-brand-blue shrink-0 mt-0.5" />
-                          <div>
-                            <p className="text-sm font-bold text-gray-900 mb-1">1-Click Checkout Embedded</p>
-                            <p className="text-xs text-gray-600">Every reminder includes a unique payment link via your connected gateway.</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 min-h-[280px] text-center p-8">
-                      <Bot className="w-12 h-12 text-gray-200 mb-4" />
-                      <p className="text-sm font-bold text-gray-500 mb-1">No preview yet</p>
-                      <p className="text-xs text-gray-400">Paste a sample email and click Generate Preview</p>
-                    </div>
-                  )}
+
                 </div>
               </div>
             </div>
           )}
 
-          {/* ═══════════ SETTINGS TAB ═══════════ */}
-          {activeTab === 'settings' && (
-            <div className="space-y-6 animate-[fadeIn_0.3s_ease-out]">
-              {/* Plan Banner */}
-              <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
-                <div className="absolute right-0 top-0 h-full w-48 bg-gradient-to-l from-brand-blue/20 to-transparent"></div>
-                <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div>
-                    <div className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Current Plan</div>
-                    <h3 className="font-heading text-2xl font-bold text-white mb-1">Hook — Free</h3>
-                    <p className="text-sm text-gray-400">3 free recoveries · First 3 invoices on us</p>
-                  </div>
-                  <Link to="/pricing" className="bg-brand-blue text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg text-sm whitespace-nowrap">
-                    Upgrade to Solo — $29/mo
-                  </Link>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Payment Gateways */}
-                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-                  <div className="flex items-center gap-3 mb-5">
-                    <div className="p-2 bg-green-100 rounded-xl"><CreditCard className="w-5 h-5 text-green-600" /></div>
-                    <div>
-                      <h3 className="font-bold text-gray-900">Payment Gateways</h3>
-                      <p className="text-xs text-gray-400">Connect to generate 1-click checkout links</p>
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    {connectedGateways.map(gw => (
-                      <div key={gw} className="flex items-center justify-between p-3.5 bg-green-50 border border-green-200 rounded-xl">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 bg-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">S</div>
-                          <div>
-                            <div className="font-bold text-gray-900 text-sm capitalize">{gw}</div>
-                            <div className="text-xs text-gray-400">Connected via API Key</div>
-                          </div>
-                        </div>
-                        <span className="text-xs font-bold text-green-600 flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> Active</span>
-                      </div>
-                    ))}
-
-                    {!showAddGateway ? (
-                      <>
-                        <button onClick={() => setShowAddGateway(true)} className="w-full p-3.5 border-2 border-dashed border-gray-200 rounded-xl text-sm font-bold text-gray-400 hover:text-gray-700 hover:border-gray-300 transition-colors flex items-center justify-center gap-2">
-                          <Plus className="w-4 h-4" /> Connect Razorpay
-                        </button>
-                        <button onClick={() => addToast('UPI link integration coming soon.', 'warning')} className="w-full p-3.5 border-2 border-dashed border-gray-200 rounded-xl text-sm font-bold text-gray-400 hover:text-gray-700 hover:border-gray-300 transition-colors flex items-center justify-center gap-2">
-                          <Plus className="w-4 h-4" /> Add UPI / Static Link
-                        </button>
-                      </>
-                    ) : (
-                      <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-3">
-                        <input type="text" placeholder="Paste your Razorpay API Key..." className="w-full bg-white border border-gray-200 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-astrix-teal" />
-                        <div className="flex gap-2">
-                          <button onClick={() => setShowAddGateway(false)} className="flex-1 px-4 py-2 rounded-lg text-sm font-bold text-gray-600 bg-white border border-gray-200 hover:bg-gray-100">Cancel</button>
-                          <button onClick={() => { setShowAddGateway(false); addToast('Gateway connected successfully!', 'success'); }} className="flex-1 px-4 py-2 rounded-lg text-sm font-bold text-white bg-astrix-teal hover:bg-astrix-darkTeal">Connect</button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Notifications */}
-                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-                  <div className="flex items-center gap-3 mb-5">
-                    <div className="p-2 bg-blue-100 rounded-xl"><Mail className="w-5 h-5 text-blue-600" /></div>
-                    <div>
-                      <h3 className="font-bold text-gray-900">Notifications</h3>
-                      <p className="text-xs text-gray-400">Control what alerts you receive</p>
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    {[
-                      { key: 'payment_received', label: 'Payment received alert' },
-                      { key: 'nudge_sent', label: 'Reminder sent confirmation' },
-                      { key: 'payment_failed', label: 'Invoice dispute alert' },
-                      { key: 'weekly_summary', label: 'Weekly recovery summary' },
-                    ].map(item => (
-                      <label key={item.key} className="flex items-center justify-between cursor-pointer group">
-                        <span className="text-sm text-gray-700 font-medium group-hover:text-gray-900 transition-colors">{item.label}</span>
-                        <input
-                          type="checkbox"
-                          checked={notifPrefs[item.key as keyof typeof notifPrefs]}
-                          onChange={e => setNotifPrefs(prev => ({ ...prev, [item.key]: e.target.checked }))}
-                          className="w-5 h-5 accent-astrix-teal rounded cursor-pointer"
-                        />
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Security Note */}
-              <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5 flex items-start gap-3">
-                <ShieldCheck className="w-5 h-5 text-brand-blue shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="text-sm font-bold text-gray-900 mb-1">Your data is secure</h4>
-                  <p className="text-xs text-gray-600">All API keys are encrypted with AES-256. We never store your clients' payment data. Running in demo mode — connect Supabase to enable real data persistence.</p>
-                </div>
-              </div>
-            </div>
-          )}
-        </>
-      )}
+        </div>
+      </div>
     </AppLayout>
   );
 };
+
+export default Settings;

@@ -1,26 +1,33 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import type { NodePath } from '@babel/core';
+import type { types as BabelTypes } from '@babel/core';
 
 export default defineConfig({
   plugins: [react({ babel: { plugins: [
-function __dualiteSourceLoc({ types: t }) {
-  return { visitor: { JSXOpeningElement(path, state) {
-    var fn = state.filename || '';
+function __dualiteSourceLoc({ types: t }: { types: typeof BabelTypes }) {
+  return { visitor: { JSXOpeningElement(path: NodePath<BabelTypes.JSXOpeningElement>, state: { filename?: string }) {
+    const fn = state.filename || '';
     if (!fn || fn.includes('node_modules')) return;
-    var name = path.node.name;
-    var reactSpecials = ['Fragment', 'StrictMode', 'Suspense', 'Profiler'];
-    var isReactSpecial = (name.type === 'JSXIdentifier' && reactSpecials.indexOf(name.name) !== -1) ||
-      (name.type === 'JSXMemberExpression' && name.object && name.object.name === 'React' && name.property && reactSpecials.indexOf(name.property.name) !== -1) ||
-      (name.type === 'JSXMemberExpression' && name.property && (name.property.name === 'Provider' || name.property.name === 'Consumer'));
+    const name = path.node.name;
+    const reactSpecials = ['Fragment', 'StrictMode', 'Suspense', 'Profiler'];
+    const isReactSpecial = (name.type === 'JSXIdentifier' && reactSpecials.indexOf(name.name) !== -1) ||
+      (name.type === 'JSXMemberExpression' && name.object &&
+        (name.object as BabelTypes.JSXIdentifier).name === 'React' && name.property &&
+        reactSpecials.indexOf((name.property as BabelTypes.JSXIdentifier).name) !== -1) ||
+      (name.type === 'JSXMemberExpression' && name.property &&
+        ((name.property as BabelTypes.JSXIdentifier).name === 'Provider' ||
+          (name.property as BabelTypes.JSXIdentifier).name === 'Consumer'));
     if (isReactSpecial) return;
-    var attrs = path.node.attributes;
-    for (var i = 0; i < attrs.length; i++) {
-      if (attrs[i].type === 'JSXAttribute' && attrs[i].name && attrs[i].name.name === 'data-ds') return;
+    const attrs = path.node.attributes;
+    for (let i = 0; i < attrs.length; i++) {
+      if (attrs[i].type === 'JSXAttribute' && (attrs[i] as BabelTypes.JSXAttribute).name &&
+          ((attrs[i] as BabelTypes.JSXAttribute).name as BabelTypes.JSXIdentifier).name === 'data-ds') return;
     }
-    var loc = path.node.loc;
+    const loc = path.node.loc;
     if (!loc) return;
-    var wd = '/home/project/';
-    var rel = fn.startsWith(wd) ? fn.slice(wd.length) : fn;
+    const wd = '/home/project/';
+    const rel = fn.startsWith(wd) ? fn.slice(wd.length) : fn;
     attrs.push(t.jsxAttribute(t.jsxIdentifier('data-ds'), t.stringLiteral(rel + ':' + loc.start.line + ':' + loc.start.column)));
   } } };
 }

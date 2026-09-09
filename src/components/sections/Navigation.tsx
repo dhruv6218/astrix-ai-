@@ -1,6 +1,9 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import { Menu, X } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { MagneticButton } from '../ui/MagneticButton';
 import { InstallPrompt } from '../InstallPrompt';
 
@@ -8,7 +11,7 @@ export const Navigation = () => {
   const [scrolled, setScrolled] = useState(false);
   const [hidden, setHidden] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const location = useLocation();
+  const pathname = usePathname();
   let lastScrollY = 0;
 
   useEffect(() => {
@@ -37,10 +40,10 @@ export const Navigation = () => {
 
   useEffect(() => {
     setMobileMenuOpen(false);
-  }, [location.pathname]);
+  }, [pathname]);
 
   const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
-    if (path.startsWith('/#') && location.pathname === '/') {
+    if (path.startsWith('/#') && pathname === '/') {
       e.preventDefault();
       const id = path.replace('/#', '');
       const element = document.getElementById(id);
@@ -63,7 +66,7 @@ export const Navigation = () => {
         <div className="max-w-[1400px] mx-auto px-6 md:px-12 flex items-center justify-between">
           
           {/* Logo */}
-          <Link to="/" onClick={(e) => handleNavClick(e, '/')} className="flex items-center gap-3 group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue rounded-lg p-1 relative z-[70]">
+          <Link href="/" onClick={(e) => handleNavClick(e, '/')} className="flex items-center gap-3 group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue rounded-lg p-1 relative z-[70]">
             <div className="relative flex items-center justify-center">
               <img 
                 src="https://images.dualite.app/102e86e1-720e-45cc-9e4e-55e865135e96/asset-b9a7a63e-c65a-4fa8-9433-c13564a7364e.webp" 
@@ -79,7 +82,7 @@ export const Navigation = () => {
             {navLinks.map((item) => (
               <Link 
                 key={item.name} 
-                to={item.path} 
+                href={item.path} 
                 onClick={(e) => handleNavClick(e, item.path)}
                 className="hover:text-gray-900 transition-colors relative group py-2 px-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:text-gray-900"
               >
@@ -93,11 +96,11 @@ export const Navigation = () => {
           <div className="flex items-center gap-4 relative z-[70]">
             <div className="hidden md:flex items-center gap-4">
               <InstallPrompt />
-              <Link to="/login" className="text-sm font-bold text-gray-600 hover:text-gray-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue rounded-md px-2 py-1">
+              <Link href="/login" className="text-sm font-bold text-gray-600 hover:text-gray-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue rounded-md px-2 py-1">
                 Log in
               </Link>
               <MagneticButton strength={0.15}>
-                <Link to="/signup" className="bg-gray-900 text-white px-6 py-2.5 rounded-full text-sm font-semibold hover:bg-brand-blue transition-colors duration-300 shadow-apple btn-shine focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-blue focus-visible:ring-offset-2 inline-block">
+                <Link href="/signup" className="bg-gray-900 text-white px-6 py-2.5 rounded-full text-sm font-semibold hover:bg-brand-blue transition-colors duration-300 shadow-apple btn-shine focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-blue focus-visible:ring-offset-2 inline-block">
                   Start Free
                 </Link>
               </MagneticButton>
@@ -121,7 +124,7 @@ export const Navigation = () => {
           {navLinks.map((item, i) => (
             <div key={item.name} className="overflow-hidden">
               <Link 
-                to={item.path} 
+                href={item.path} 
                 onClick={(e) => handleNavClick(e, item.path)}
                 className={`block font-heading text-4xl font-black tracking-tighter text-gray-900 transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${mobileMenuOpen ? 'translate-y-0' : 'translate-y-full'}`}
                 style={{ transitionDelay: `${i * 50}ms` }}
@@ -133,10 +136,10 @@ export const Navigation = () => {
           
           <div className={`mt-8 transition-all duration-500 delay-300 flex flex-col gap-4 ${mobileMenuOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
             <InstallPrompt />
-            <Link to="/signup" className="w-full bg-brand-blue text-white px-6 py-4 rounded-full text-lg font-bold shadow-glow-blue text-center focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-blue focus-visible:ring-offset-2">
+            <Link href="/signup" className="w-full bg-brand-blue text-white px-6 py-4 rounded-full text-lg font-bold shadow-glow-blue text-center focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-blue focus-visible:ring-offset-2">
               Start Free
             </Link>
-            <Link to="/login" className="w-full bg-gray-50 text-gray-900 border border-gray-200 px-6 py-4 rounded-full text-lg font-bold text-center focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-gray-300 focus-visible:ring-offset-2">
+            <Link href="/login" className="w-full bg-gray-50 text-gray-900 border border-gray-200 px-6 py-4 rounded-full text-lg font-bold text-center focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-gray-300 focus-visible:ring-offset-2">
               Log In
             </Link>
           </div>

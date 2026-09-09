@@ -1,5 +1,7 @@
+'use client';
+
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { AuthLayout } from '../layouts/AuthLayout';
 import { ArrowLeft, MailCheck, Loader2, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -33,7 +35,7 @@ export const ForgotPassword = () => {
     <AuthLayout>
       <div className="bg-white p-8 md:p-10 rounded-3xl shadow-apple border border-gray-200 w-full animate-[fadeIn_0.5s_ease-out]">
         
-        <Link to="/login" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 font-medium mb-8 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue rounded-sm">
+        <Link href="/login" className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 font-medium mb-8 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue rounded-sm">
           <ArrowLeft className="w-4 h-4" /> Back to login
         </Link>
 
@@ -41,7 +43,7 @@ export const ForgotPassword = () => {
           <div className="animate-[fadeIn_0.3s_ease-out]">
             <div className="mb-8">
               <h1 className="font-heading text-3xl font-bold text-gray-900 mb-2 tracking-tight">Reset password.</h1>
-              <p className="text-gray-500 text-sm font-medium">Enter your email and we'll send you a reset link.</p>
+              <p className="text-gray-500 text-sm font-medium">Enter your email and we&apos;ll send you a reset link.</p>
             </div>
 
             {error && (
@@ -87,7 +89,7 @@ export const ForgotPassword = () => {
               onClick={() => setIsSubmitted(false)}
               className="text-sm text-brand-blue font-bold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue rounded-sm"
             >
-              Didn't receive the email? Click to resend.
+              Didn&apos;t receive the email? Click to resend.
             </button>
           </div>
         )}
@@ -96,3 +98,5 @@ export const ForgotPassword = () => {
     </AuthLayout>
   );
 };
+
+export default ForgotPassword;

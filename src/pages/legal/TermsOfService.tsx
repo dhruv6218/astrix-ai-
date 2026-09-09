@@ -121,3 +121,5 @@ export const TermsOfService = () => {
     </MainLayout>
   );
 };
+
+export default TermsOfService;

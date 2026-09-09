@@ -195,3 +195,5 @@ export const Contact = () => {
     </MainLayout>
   );
 };
+
+export default Contact;

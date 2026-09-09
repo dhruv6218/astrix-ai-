@@ -1,5 +1,8 @@
+'use client';
+
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 
 interface OnboardingLayoutProps {
@@ -17,7 +20,7 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
   showSkip = false,
   onSkip
 }) => {
-  const navigate = useNavigate();
+  const router = useRouter();
   const progress = (step / totalSteps) * 100;
 
   return (
@@ -37,14 +40,14 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
         <div className="flex items-center gap-6">
           {step > 1 && (
             <button 
-              onClick={() => navigate(-1)}
+              onClick={() => router.back()}
               className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-500 hover:text-gray-900 hover:border-gray-300 transition-all shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue"
               aria-label="Go back"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
           )}
-          <Link to="/" className="flex items-center gap-3 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue rounded-lg p-1">
+          <Link href="/" className="flex items-center gap-3 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue rounded-lg p-1">
             <img 
               src="https://images.dualite.app/102e86e1-720e-45cc-9e4e-55e865135e96/asset-b9a7a63e-c65a-4fa8-9433-c13564a7364e.webp" 
               alt="Astrix Logo" 

@@ -1,12 +1,14 @@
+'use client';
+
 import React, { useEffect, useRef, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { usePathname } from 'next/navigation';
 
 export const CustomCursor = () => {
   const dotRef = useRef<HTMLDivElement>(null);
   const ringRef = useRef<HTMLDivElement>(null);
   const [isHovering, setIsHovering] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
-  const location = useLocation();
+  const pathname = usePathname();
 
   useEffect(() => {
     // Don't show custom cursor on touch devices
@@ -66,7 +68,7 @@ export const CustomCursor = () => {
   }, []);
 
   // ENTERPRISE FIX: Disable custom cursor inside the app for better accessibility and performance
-  const isAppRoute = location.pathname.startsWith('/app');
+  const isAppRoute = pathname?.startsWith('/app') ?? false;
   if (!isVisible || isAppRoute) return null;
 
   return (

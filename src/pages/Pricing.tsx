@@ -1,10 +1,12 @@
+'use client';
+
 import React, { useState } from 'react';
 import { MainLayout } from '../layouts/MainLayout';
-import { Check, HelpCircle, Loader2, Sparkles } from 'lucide-react';
+import { Check, HelpCircle, Loader2, Sparkles, X } from 'lucide-react';
 import { useScrollReveal } from '../hooks/useScrollReveal';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import { useToast } from '../contexts/ToastContext';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 
 export const Pricing = () => {
   const { ref: headerRef, isVisible: headerVisible } = useScrollReveal();
@@ -12,7 +14,7 @@ export const Pricing = () => {
 
   const { activeWorkspace } = useWorkspace();
   const { addToast } = useToast();
-  const navigate = useNavigate();
+  const router = useRouter();
   const [loadingTier, setLoadingTier] = useState<string | null>(null);
   const [isAnnual, setIsAnnual] = useState(true);
 
@@ -26,7 +28,7 @@ export const Pricing = () => {
       desc: "First 3 successful invoice recoveries for free. No credit card required.",
       features: [
         "3 Free Recoveries",
-        "1 Connected Gateway",
+        "Multi-gateway connection",
         "AI Tone Cloning",
         "Basic Dashboard",
         "Email Reminders",
@@ -47,7 +49,7 @@ export const Pricing = () => {
       features: [
         "Unlimited Invoices",
         "Unlimited Recoveries",
-        "1 Connected Gateway",
+        "Multi-gateway connection",
         "AI Tone Cloning",
         "Smart Escalation",
         "Payment Tracking",
@@ -68,11 +70,10 @@ export const Pricing = () => {
       features: [
         "Everything in Solo",
         "5 Team Members",
-        "5 Connected Gateways",
+        "Multi-gateway connection",
         "White-Label Domain",
         "Custom Branding",
         "Priority Support",
-        "API Access",
       ],
       comingSoon: [
         "Advanced Analytics"
@@ -85,7 +86,7 @@ export const Pricing = () => {
   const faqs = [
     { q: "What counts as a 'recovery'?", a: "A recovery is when an overdue invoice is successfully paid after Astrix sends one or more AI-powered reminders. You're only charged for actual results." },
     { q: "Which payment gateways are supported?", a: "We support Stripe (via OAuth/API keys), Razorpay (API keys), and custom static links (UPI, PayPal, etc.). More gateways are added regularly." },
-    { q: "How does AI tone cloning work?", a: "You paste 2-3 of your past emails, and our AI learns your writing style — friendly, firm, or somewhere in between. Every reminder sounds like it came from you." },
+    { q: "How does AI tone cloning work?", a: "You paste 2-3 of your past emails, and our AI learns your writing style � friendly, firm, or somewhere in between. Every reminder sounds like it came from you." },
     { q: "Can I pause reminders for a specific invoice?", a: "Yes! Every invoice has a 'Pause AI' button. You can also mark invoices as disputed or paid manually at any time." },
     { q: "Is my data secure?", a: "Absolutely. We use enterprise-grade encryption, and your data is never used to train AI models. We're SOC 2 compliant." },
     { q: "Can I cancel anytime?", a: "Yes, you can cancel your subscription at any time from the billing settings. You will retain access until the end of your current billing period." }
@@ -96,7 +97,7 @@ export const Pricing = () => {
   const handleCheckout = async (tier: any) => {
     if (!activeWorkspace) {
       addToast("Please log in or create an account to upgrade.", "warning");
-      navigate('/signup');
+      router.push('/signup');
       return;
     }
 
@@ -105,7 +106,7 @@ export const Pricing = () => {
     setTimeout(() => {
       setLoadingTier(null);
       addToast(`Redirecting to checkout for ${tier.name} plan...`, "success");
-      navigate('/app/settings?tab=billing');
+      router.push('/app/settings?tab=billing');
     }, 1500);
   };
 
@@ -139,7 +140,7 @@ export const Pricing = () => {
       </div>
 
       {/* Pricing Cards */}
-      <div className="max-w-[1400px] mx-auto px-4 md:px-6 -mt-12 relative z-10 mb-32" ref={cardsRef}>
+      <div className="max-w-[1400px] mx-auto px-4 md:px-6 -mt-12 relative z-10 mb-20" ref={cardsRef}>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 max-w-[1200px] mx-auto">
           {tiers.map((tier, i) => (
             <div 
@@ -196,6 +197,64 @@ export const Pricing = () => {
         </div>
       </div>
 
+      {/* Feature Comparison Table */}
+      <div className="max-w-[1000px] mx-auto px-4 md:px-6 mb-32 hidden md:block">
+        <div className="text-center mb-10">
+          <h2 className="text-3xl font-heading font-bold text-gray-900 mb-4">Compare Plans</h2>
+          <p className="text-gray-500 font-medium max-w-xl mx-auto">Find the perfect set of features for your workflow.</p>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-3xl overflow-hidden shadow-sm">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr>
+                <th className="p-6 bg-gray-50 border-b border-gray-200 text-gray-900 font-heading font-bold text-lg w-1/3">Features</th>
+                <th className="p-6 bg-gray-50 border-b border-gray-200 text-gray-900 font-heading font-bold text-center w-1/5">Hook</th>
+                <th className="p-6 bg-brand-blue/5 border-b border-gray-200 text-brand-blue font-heading font-bold text-center w-1/5">Solo</th>
+                <th className="p-6 bg-gray-50 border-b border-gray-200 text-gray-900 font-heading font-bold text-center w-1/5">Agency</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {[
+                { name: 'Successful Recoveries', hook: '3 Included', solo: 'Unlimited', agency: 'Unlimited' },
+                { name: 'AI Tone Cloning', hook: true, solo: true, agency: true },
+                { name: 'Multi-gateway connection', hook: true, solo: true, agency: true },
+                { name: 'Automated Escalation', hook: false, solo: true, agency: true },
+                { name: 'Payment Tracking', hook: false, solo: true, agency: true },
+                { name: 'Team Members', hook: '1 User', solo: '1 User', agency: '5 Users' },
+                { name: 'Custom Branding', hook: false, solo: false, agency: true },
+                { name: 'White-Label Domain', hook: false, solo: false, agency: true },
+                { name: 'Priority Support', hook: false, solo: false, agency: true },
+              ].map((row, i) => (
+                <tr key={i} className="hover:bg-gray-50/50 transition-colors">
+                  <td className="p-6 text-sm font-medium text-gray-900">{row.name}</td>
+                  
+                  {/* Hook */}
+                  <td className="p-6 text-center text-sm font-bold text-gray-500">
+                    {typeof row.hook === 'boolean' ? (
+                      row.hook ? <Check className="w-5 h-5 mx-auto text-green-500" /> : <X className="w-5 h-5 mx-auto text-gray-300" />
+                    ) : row.hook}
+                  </td>
+                  
+                  {/* Solo */}
+                  <td className="p-6 text-center text-sm font-bold text-brand-blue bg-brand-blue/5">
+                    {typeof row.solo === 'boolean' ? (
+                      row.solo ? <Check className="w-5 h-5 mx-auto text-brand-blue" /> : <X className="w-5 h-5 mx-auto text-gray-300" />
+                    ) : row.solo}
+                  </td>
+                  
+                  {/* Agency */}
+                  <td className="p-6 text-center text-sm font-bold text-gray-900">
+                    {typeof row.agency === 'boolean' ? (
+                      row.agency ? <Check className="w-5 h-5 mx-auto text-green-500" /> : <X className="w-5 h-5 mx-auto text-gray-300" />
+                    ) : row.agency}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       {/* FAQ */}
       <div className="max-w-[800px] mx-auto px-6 md:px-12 mb-32">
         <div className="flex items-center justify-center gap-3 mb-12">
@@ -210,7 +269,7 @@ export const Pricing = () => {
                 onClick={() => setOpenFaq(openFaq === i ? null : i)}
               >
                 <span className="font-bold text-gray-900 group-hover:text-brand-blue transition-colors">{faq.q}</span>
-                <span className={`transform transition-transform duration-300 text-gray-400 group-hover:text-brand-blue ${openFaq === i ? 'rotate-180' : ''}`}>↓</span>
+                <span className={`transform transition-transform duration-300 text-gray-400 group-hover:text-brand-blue ${openFaq === i ? 'rotate-180' : ''}`}>?</span>
               </button>
               <div 
                 className="grid transition-all duration-300 ease-in-out"
@@ -228,3 +287,5 @@ export const Pricing = () => {
     </MainLayout>
   );
 };
+
+export default Pricing;

@@ -1,11 +1,14 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import { AuthLayout } from '../layouts/AuthLayout';
 import { Eye, EyeOff, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '../contexts/AuthContext';
 
 export const ResetPassword = () => {
-  const navigate = useNavigate();
+  const router = useRouter();
   const { updatePassword } = useAuth();
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -24,8 +27,8 @@ export const ResetPassword = () => {
 
   const getStrengthColor = () => {
     if (strength === 0) return 'bg-gray-200';
-    if (strength === 1) return 'bg-brand-red';
-    if (strength === 2) return 'bg-brand-yellow';
+    if (strength === 1) return 'bg-red-500';
+    if (strength === 2) return 'bg-yellow-500';
     return 'bg-green-500';
   };
 
@@ -62,7 +65,7 @@ export const ResetPassword = () => {
                 <div>
                   <span>{error}</span>
                   {error.includes('expired') && (
-                    <Link to="/forgot-password" className="block mt-2 font-bold hover:underline">Request new link</Link>
+                    <Link href="/forgot-password" className="block mt-2 font-bold hover:underline">Request new link</Link>
                   )}
                 </div>
               </div>
@@ -128,7 +131,7 @@ export const ResetPassword = () => {
             <p className="text-gray-500 text-sm font-medium mb-8">
               Your password has been successfully reset.
             </p>
-            <Link to="/login" className="w-full inline-block text-white bg-gray-900 hover:bg-brand-blue focus-visible:ring-4 focus-visible:ring-brand-blue focus-visible:ring-offset-2 font-bold rounded-xl text-sm px-5 py-4 text-center transition-all shadow-apple outline-none">
+            <Link href="/login" className="w-full inline-block text-white bg-gray-900 hover:bg-brand-blue focus-visible:ring-4 focus-visible:ring-brand-blue focus-visible:ring-offset-2 font-bold rounded-xl text-sm px-5 py-4 text-center transition-all shadow-apple outline-none">
               Continue to Login
             </Link>
           </div>
@@ -138,3 +141,5 @@ export const ResetPassword = () => {
     </AuthLayout>
   );
 };
+
+export default ResetPassword;

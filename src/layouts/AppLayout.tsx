@@ -1,11 +1,14 @@
+'use client';
+
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
 import { 
   LayoutDashboard, FileText, Bot, Settings, LogOut, 
   Bell, Menu, X, ChevronDown, Check, Plus, Lock,
   CreditCard, Sparkles, Search, Zap, Activity,
   Radio, Target, GitCompare, CheckCircle2, FileCode2,
-  Rocket, Building2, MessageCircle
+  Rocket, Building2, MessageCircle, Megaphone
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
@@ -20,8 +23,8 @@ interface AppLayoutProps {
 }
 
 export const AppLayout: React.FC<AppLayoutProps> = ({ children, title, subtitle, actions, backPath }) => {
-  const location = useLocation();
-  const navigate = useNavigate();
+  const pathname = usePathname();
+  const router = useRouter();
   const { user, signOut } = useAuth();
   const { workspaces, activeWorkspace, isWorkspaceInitializing, setActiveWorkspace } = useWorkspace();
   const { addToast } = useToast();
@@ -29,11 +32,22 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, title, subtitle,
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isWorkspaceDropdownOpen, setIsWorkspaceDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  const [globalAnnouncement, setGlobalAnnouncement] = useState('');
+  const [impersonationName, setImpersonationName] = useState('');
 
   useEffect(() => {
     setIsMobileMenuOpen(false);
     setIsWorkspaceDropdownOpen(false);
-  }, [location.pathname]);
+    
+    // Check for global announcements
+    const savedAnnouncement = localStorage.getItem('global_announcement');
+    if (savedAnnouncement) setGlobalAnnouncement(savedAnnouncement);
+
+    // Check for impersonation
+    const impersonated = localStorage.getItem('impersonated_user_name');
+    if (impersonated) setImpersonationName(impersonated);
+  }, [pathname]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -47,12 +61,20 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, title, subtitle,
 
   const handleSignOut = async () => {
     await signOut();
-    navigate('/login');
+    router.push('/login');
   };
 
   const handleUpgradeClick = () => {
     addToast("Redirecting to upgrade options...", "success");
-    navigate('/pricing');
+    router.push('/pricing');
+  };
+
+  const handleExitImpersonation = () => {
+    localStorage.removeItem('impersonated_user_id');
+    localStorage.removeItem('impersonated_user_name');
+    setImpersonationName('');
+    addToast('Exited Impersonation Mode', 'success');
+    router.push('/godview');
   };
 
   const navSections = [
@@ -67,21 +89,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, title, subtitle,
       ],
     },
     {
-      label: 'Intelligence',
+      label: 'Account',
       items: [
-        { name: 'Signals', path: '/app/signals', icon: Radio, desc: 'Raw feedback feed' },
-        { name: 'Problems', path: '/app/problems', icon: Target, desc: 'AI-clustered problems' },
-        { name: 'Opportunities', path: '/app/opportunities', icon: GitCompare, desc: 'Ranked & scored' },
-        { name: 'Decisions', path: '/app/decisions', icon: CheckCircle2, desc: 'Decision history' },
-        { name: 'Artifacts', path: '/app/artifacts', icon: FileCode2, desc: 'PRD & memo studio' },
-        { name: 'Launches', path: '/app/launches', icon: Rocket, desc: 'Post-launch tracking' },
-      ],
-    },
-    {
-      label: 'Workspace',
-      items: [
-        { name: 'Accounts', path: '/app/accounts', icon: Building2, desc: 'CRM context layer' },
-        { name: 'Ask AI', path: '/app/ask', icon: MessageCircle, desc: 'Query your data' },
         { name: 'Settings', path: '/app/settings', icon: Settings, desc: 'Account & billing' },
       ],
     },
@@ -107,7 +116,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, title, subtitle,
         
         {/* Logo */}
         <div className="h-16 flex items-center justify-between px-6 border-b border-slate-800 shrink-0">
-          <Link to="/app" className="flex items-center gap-2 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-astrix-teal rounded-md">
+          <Link href="/app" className="flex items-center gap-2 group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-astrix-teal rounded-md">
             <img 
               src="https://images.dualite.app/102e86e1-720e-45cc-9e4e-55e865135e96/asset-b9a7a63e-c65a-4fa8-9433-c13564a7364e.webp" 
               alt="Astrix Logo" 
@@ -120,12 +129,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, title, subtitle,
           </button>
         </div>
 
-        {/* Workspace Switcher */}
-        <div className="p-4 shrink-0 relative" ref={dropdownRef}>
-          <button 
-            onClick={() => setIsWorkspaceDropdownOpen(!isWorkspaceDropdownOpen)}
-            className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-sidebar-hover/50 border border-slate-700/50 hover:bg-sidebar-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-astrix-teal"
-          >
+        {/* Active Workspace / Plan Info */}
+        <div className="p-4 shrink-0 border-b border-slate-800/50">
+          <div className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-sidebar-hover/30 border border-slate-700/30 cursor-default">
             <div className="flex items-center gap-3 overflow-hidden">
               <div className="w-8 h-8 rounded-md bg-astrix-teal/20 border border-astrix-teal/30 flex items-center justify-center text-astrix-teal font-bold text-xs shadow-sm shrink-0">
                 {isWorkspaceInitializing ? '...' : wsInitials}
@@ -134,40 +140,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, title, subtitle,
                 <span className="text-sm font-bold text-white leading-tight truncate w-full text-left">
                   {isWorkspaceInitializing ? 'Loading...' : wsName}
                 </span>
-                <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest">Free Plan</span>
+                <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest">Solo Plan</span>
               </div>
             </div>
-            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform shrink-0 ${isWorkspaceDropdownOpen ? 'rotate-180' : ''}`} />
-          </button>
-
-          {isWorkspaceDropdownOpen && (
-            <div className="absolute top-full left-4 right-4 mt-2 bg-slate-800 border border-slate-700 rounded-xl shadow-xl z-50 overflow-hidden animate-[fadeIn_0.15s_ease-out]">
-              <div className="p-2 space-y-1">
-                <div className="text-[10px] font-mono text-slate-400 uppercase tracking-widest px-2 py-1">Your Workspaces</div>
-                {workspaces.map(ws => (
-                  <button 
-                    key={ws.id}
-                    onClick={() => { setActiveWorkspace(ws); setIsWorkspaceDropdownOpen(false); }}
-                    className="w-full flex items-center justify-between px-2 py-2 rounded-lg hover:bg-slate-700 transition-colors text-left"
-                  >
-                    <span className="text-sm font-bold text-white truncate">{ws.name}</span>
-                    {activeWorkspace?.id === ws.id && <Check className="w-4 h-4 text-astrix-teal" />}
-                  </button>
-                ))}
-              </div>
-              <div className="border-t border-slate-700 p-2">
-                <button 
-                  onClick={() => { setIsWorkspaceDropdownOpen(false); addToast("Multiple workspaces require the Agency plan.", "warning"); navigate('/pricing'); }}
-                  className="w-full flex items-center justify-between px-2 py-2 rounded-lg hover:bg-slate-700 transition-colors text-left group"
-                >
-                  <span className="flex items-center gap-2 text-sm font-bold text-slate-300 group-hover:text-white">
-                    <Plus className="w-4 h-4" /> New Workspace
-                  </span>
-                  <Lock className="w-3.5 h-3.5 text-slate-500" />
-                </button>
-              </div>
-            </div>
-          )}
+          </div>
         </div>
 
         {/* Navigation */}
@@ -177,11 +153,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, title, subtitle,
               <div className="text-[9px] font-mono text-slate-600 uppercase tracking-widest font-bold px-3 mb-1 mt-2">{section.label}</div>
               <div className="space-y-0.5">
                 {section.items.map((item) => {
-                  const isActive = location.pathname === item.path || (item.path !== '/app' && location.pathname.startsWith(item.path));
+                  const isActive = pathname === item.path || (item.path !== '/app' && pathname?.startsWith(item.path));
                   return (
                     <Link
                       key={item.name}
-                      to={item.path}
+                      href={item.path}
                       className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-astrix-teal group ${
                         isActive 
                           ? 'bg-astrix-teal text-white shadow-md' 
@@ -243,6 +219,41 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, title, subtitle,
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col min-h-screen w-full md:ml-64 transition-all duration-300">
         
+        {/* Banners */}
+        {impersonationName && (
+          <div className="bg-red-600 text-white px-4 py-2 flex items-center justify-between z-40 relative shadow-md">
+            <div className="flex items-center gap-2">
+              <LogOut className="w-4 h-4 shrink-0" />
+              <span className="text-sm font-bold">Impersonating User: <span className="font-black">{impersonationName}</span></span>
+            </div>
+            <button 
+              onClick={handleExitImpersonation}
+              className="bg-white/20 hover:bg-white/30 px-3 py-1 rounded text-xs font-bold transition-colors"
+            >
+              Exit & Return to Admin
+            </button>
+          </div>
+        )}
+
+        {globalAnnouncement && (
+          <div className="bg-brand-blue text-white px-4 py-2.5 flex items-center justify-between z-40 relative shadow-sm">
+            <div className="flex items-center gap-2">
+              <Megaphone className="w-4 h-4 shrink-0" />
+              <span className="text-sm font-medium">{globalAnnouncement}</span>
+            </div>
+            <button 
+              onClick={() => {
+                setGlobalAnnouncement('');
+                // If we want it strictly dismissible per user, we could clear it here.
+                // But for the sake of demo, just hiding it in local state.
+              }}
+              className="text-blue-200 hover:text-white p-1"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
         {/* Top Header */}
         <header className="h-16 bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-30 flex items-center justify-between px-4 md:px-8">
           <div className="flex items-center gap-3">
@@ -253,7 +264,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, title, subtitle,
               <Menu className="w-5 h-5" />
             </button>
             {backPath && (
-              <Link to={backPath} className="p-2 -ml-2 text-gray-400 hover:text-gray-900 transition-colors">
+              <Link href={backPath} className="p-2 -ml-2 text-gray-400 hover:text-gray-900 transition-colors">
                 <ChevronDown className="w-5 h-5 rotate-90" />
               </Link>
             )}
@@ -264,14 +275,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, title, subtitle,
           </div>
           
           <div className="flex items-center gap-2 md:gap-4 shrink-0">
-            <Link to="/pricing" className="hidden lg:flex items-center gap-1.5 bg-brand-yellow/10 text-yellow-700 border border-brand-yellow/20 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-brand-yellow/20 transition-colors">
+            <Link href="/pricing" className="hidden lg:flex items-center gap-1.5 bg-brand-yellow/10 text-yellow-700 border border-brand-yellow/20 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-brand-yellow/20 transition-colors">
               <Zap className="w-3.5 h-3.5" /> Upgrade Plan
             </Link>
-            <div className="hidden lg:flex items-center bg-gray-100 border border-gray-200 rounded-lg px-3 py-1.5 cursor-pointer hover:bg-gray-200 transition-colors group">
-              <Search className="w-3.5 h-3.5 text-gray-400 mr-2" />
-              <span className="text-xs font-bold text-gray-400">Search invoices...</span>
-              <kbd className="ml-4 px-1.5 py-0.5 rounded border border-gray-300 bg-white text-[10px] font-bold text-gray-400">⌘K</kbd>
-            </div>
             {actions && <div className="hidden sm:block">{actions}</div>}
             <div className="h-6 w-[1px] bg-gray-200 mx-1 hidden sm:block"></div>
             <button className="text-gray-400 hover:text-gray-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-astrix-teal rounded-full p-1.5 relative">

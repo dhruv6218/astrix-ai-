@@ -1,7 +1,9 @@
+'use client';
+
 import React from 'react';
 import { MainLayout } from '../layouts/MainLayout';
 import { Hammer, ArrowLeft } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 
 export const ComingSoon = () => {
   return (
@@ -17,7 +19,7 @@ export const ComingSoon = () => {
           We are currently building out this section of the Astrix platform. Check back soon for updates.
         </p>
         <Link 
-          to="/" 
+          href="/" 
           className="bg-gray-900 text-white px-8 py-4 rounded-full font-bold hover:bg-brand-blue transition-all duration-300 shadow-apple flex items-center gap-2 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-blue focus-visible:ring-offset-2"
         >
           <ArrowLeft className="w-5 h-5" /> Back to Home
@@ -26,3 +28,5 @@ export const ComingSoon = () => {
     </MainLayout>
   );
 };
+
+export default ComingSoon;

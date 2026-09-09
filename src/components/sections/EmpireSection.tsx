@@ -1,14 +1,17 @@
+﻿'use client';
+
 import React from 'react';
 import { useScrollReveal } from '../../hooks/useScrollReveal';
 import { MagneticButton } from '../ui/MagneticButton';
-import { Link, useLocation } from 'react-router-dom';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 export const EmpireSection = () => {
   const { ref, isVisible } = useScrollReveal();
-  const location = useLocation();
+  const pathname = usePathname();
 
   const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, path: string) => {
-    if (path.startsWith('/#') && location.pathname === '/') {
+    if (path.startsWith('/#') && pathname === '/') {
       e.preventDefault();
       const id = path.replace('/#', '');
       const element = document.getElementById(id);
@@ -38,12 +41,12 @@ export const EmpireSection = () => {
 
         <div className={`flex flex-col sm:flex-row gap-4 md:gap-6 mb-24 md:mb-32 w-full sm:w-auto transition-all duration-700 delay-150 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
           <MagneticButton strength={0.2} className="w-full sm:w-auto">
-            <Link to="/signup" className="w-full sm:w-auto inline-block bg-gray-900 border border-gray-900 text-white px-10 md:px-12 py-4 md:py-5 rounded-full font-bold text-base md:text-lg hover:bg-brand-blue hover:border-brand-blue transition-all duration-300 shadow-apple btn-shine focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-blue focus-visible:ring-offset-2">
+            <Link href="/signup" className="w-full sm:w-auto inline-block bg-gray-900 border border-gray-900 text-white px-10 md:px-12 py-4 md:py-5 rounded-full font-bold text-base md:text-lg hover:bg-brand-blue hover:border-brand-blue transition-all duration-300 shadow-apple btn-shine focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-blue focus-visible:ring-offset-2">
               Start Free
             </Link>
           </MagneticButton>
           <MagneticButton strength={0.1} className="w-full sm:w-auto">
-            <Link to="/#features" onClick={(e) => handleNavClick(e, '/#features')} className="relative w-full sm:w-auto inline-block bg-white text-gray-900 border border-gray-200 px-10 md:px-12 py-4 md:py-5 rounded-full font-bold text-base md:text-lg hover:bg-gray-50 transition-all duration-300 shadow-sm focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-gray-300 focus-visible:ring-offset-2">
+            <Link href="/#features" onClick={(e) => handleNavClick(e, '/#features')} className="relative w-full sm:w-auto inline-block bg-white text-gray-900 border border-gray-200 px-10 md:px-12 py-4 md:py-5 rounded-full font-bold text-base md:text-lg hover:bg-gray-50 transition-all duration-300 shadow-sm focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-gray-300 focus-visible:ring-offset-2">
               See the loop
             </Link>
           </MagneticButton>
@@ -53,7 +56,7 @@ export const EmpireSection = () => {
         <div className="w-full border-t border-gray-100 pt-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 text-left">
           {/* Brand */}
           <div className="md:col-span-2">
-            <Link to="/" className="flex items-center gap-3 mb-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue rounded-lg w-max">
+            <Link href="/" className="flex items-center gap-3 mb-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue rounded-lg w-max">
               <img src="https://images.dualite.app/102e86e1-720e-45cc-9e4e-55e865135e96/asset-b9a7a63e-c65a-4fa8-9433-c13564a7364e.webp" alt="Astrix Logo" className="h-10 w-auto object-contain grayscale opacity-80 hover:grayscale-0 hover:opacity-100 transition-all duration-300" />
               <div className="font-heading text-xl font-black tracking-tighter text-gray-900">ASTRIX</div>
             </Link>
@@ -67,9 +70,9 @@ export const EmpireSection = () => {
           <div>
             <h4 className="font-bold text-gray-900 mb-6 font-heading">Product</h4>
             <ul className="space-y-4 text-sm text-gray-500 font-medium">
-              <li><Link to="/#features" onClick={(e) => handleNavClick(e, '/#features')} className="hover:text-brand-blue transition-colors">Features</Link></li>
-              <li><Link to="/pricing" className="hover:text-brand-blue transition-colors">Pricing</Link></li>
-              <li><Link to="/contact" className="hover:text-brand-blue transition-colors">Contact</Link></li>
+              <li><Link href="/#features" onClick={(e) => handleNavClick(e, '/#features')} className="hover:text-brand-blue transition-colors">Features</Link></li>
+              <li><Link href="/pricing" className="hover:text-brand-blue transition-colors">Pricing</Link></li>
+              <li><Link href="/contact" className="hover:text-brand-blue transition-colors">Contact</Link></li>
             </ul>
           </div>
 
@@ -77,9 +80,9 @@ export const EmpireSection = () => {
           <div>
             <h4 className="font-bold text-gray-900 mb-6 font-heading">Legal</h4>
             <ul className="space-y-4 text-sm text-gray-500 font-medium">
-              <li><Link to="/privacy" className="hover:text-brand-blue transition-colors">Privacy Policy</Link></li>
-              <li><Link to="/terms" className="hover:text-brand-blue transition-colors">Terms of Service</Link></li>
-              <li><Link to="/refund" className="hover:text-brand-blue transition-colors">Refund Policy</Link></li>
+              <li><Link href="/privacy" className="hover:text-brand-blue transition-colors">Privacy Policy</Link></li>
+              <li><Link href="/terms" className="hover:text-brand-blue transition-colors">Terms of Service</Link></li>
+              <li><Link href="/refund" className="hover:text-brand-blue transition-colors">Refund Policy</Link></li>
             </ul>
           </div>
         </div>

@@ -1,10 +1,12 @@
+﻿'use client';
+
 import React from 'react';
 import { ArrowRight, Sparkles, Activity } from 'lucide-react';
 import { useScrollReveal } from '../../hooks/useScrollReveal';
 import { useMouseTilt } from '../../hooks/use3DEffects';
 import { useMouseParallax } from '../../hooks/useMouseParallax';
 import { MagneticButton } from '../ui/MagneticButton';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 
 export const HeroSection = () => {
   const { ref, isVisible } = useScrollReveal();
@@ -138,7 +140,7 @@ export const HeroSection = () => {
         <div className={`mt-16 md:mt-20 flex flex-col items-center transition-all duration-700 delay-500 w-full ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
           <div className="flex flex-col sm:flex-row gap-4 items-center justify-center w-full px-4 sm:px-0">
             <MagneticButton strength={0.2} className="w-full sm:w-auto">
-              <Link to="/signup" className="w-full sm:w-auto bg-brand-blue text-white px-8 md:px-10 py-3.5 md:py-4 rounded-full font-semibold text-base md:text-lg hover:bg-gray-900 transition-all duration-300 flex items-center justify-center gap-3 group shadow-glow-blue btn-shine focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-blue focus-visible:ring-offset-2">
+              <Link href="/signup" className="w-full sm:w-auto bg-brand-blue text-white px-8 md:px-10 py-3.5 md:py-4 rounded-full font-semibold text-base md:text-lg hover:bg-gray-900 transition-all duration-300 flex items-center justify-center gap-3 group shadow-glow-blue btn-shine focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-blue focus-visible:ring-offset-2">
                 Start Free <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Link>
             </MagneticButton>

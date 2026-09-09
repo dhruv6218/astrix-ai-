@@ -1,125 +1,131 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+'use client';
 
-export interface User {
-  id: string;
-  email: string;
-  user_metadata: { full_name: string };
-}
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import type { User, Session } from '@supabase/supabase-js';
+
+const MOCK_USER: User = {
+  id: 'mock-user-123',
+  app_metadata: {},
+  user_metadata: { full_name: 'Alex Rivera' },
+  aud: 'authenticated',
+  created_at: new Date().toISOString(),
+  email: 'alex@company.com',
+};
+
+const MOCK_SESSION: Session = {
+  access_token: 'mock-access-token',
+  token_type: 'bearer',
+  expires_in: 3600,
+  refresh_token: 'mock-refresh-token',
+  user: MOCK_USER,
+};
+
+const ADMIN_STORAGE_KEY = 'astrix_admin_session';
 
 interface AuthContextType {
-  session: { user: User } | null;
+  session: Session | null;
   user: User | null;
   isInitializing: boolean;
   isAdmin: boolean;
   signOut: () => Promise<void>;
-  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  signUp: (email: string, password: string, name: string) => Promise<{ error: string | null; needsConfirmation: boolean }>;
+  sendMagicLink: (email: string) => Promise<{ error: string | null }>;
   signInWithGoogle: () => Promise<void>;
   signInAsAdmin: (email: string, password: string) => Promise<{ error: string | null }>;
+  signIn: (email: string, method?: string) => Promise<{ error: string | null }>;
+  signUp: (email: string, method?: string, name?: string) => Promise<{ error: string | null; needsConfirmation?: boolean }>;
   resetPassword: (email: string) => Promise<{ error: string | null }>;
   updatePassword: (password: string) => Promise<{ error: string | null }>;
 }
 
 const AuthContext = createContext<AuthContextType>({
-  session: null, user: null, isInitializing: true, isAdmin: false,
-  signOut: async () => {}, signIn: async () => ({ error: null }),
-  signUp: async () => ({ error: null, needsConfirmation: false }),
+  session: MOCK_SESSION,
+  user: MOCK_USER,
+  isInitializing: false,
+  isAdmin: false,
+  signOut: async () => {},
+  sendMagicLink: async () => ({ error: null }),
   signInWithGoogle: async () => {},
   signInAsAdmin: async () => ({ error: null }),
+  signIn: async () => ({ error: null }),
+  signUp: async () => ({ error: null, needsConfirmation: false }),
   resetPassword: async () => ({ error: null }),
   updatePassword: async () => ({ error: null }),
 });
 
-const STORAGE_KEY = 'astrix_demo_user';
-const ADMIN_STORAGE_KEY = 'astrix_admin_session';
-
-// Hardcoded admin credentials
-const ADMIN_EMAIL = 'admin@astrix.ai';
-const ADMIN_PASSWORD = 'admin123';
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isInitializing, setIsInitializing] = useState(true);
+  const [session, setSession] = useState<Session | null>(MOCK_SESSION);
+  const [user, setUser] = useState<User | null>(MOCK_USER);
+  const [isInitializing, setIsInitializing] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem(STORAGE_KEY);
-    const adminSession = localStorage.getItem(ADMIN_STORAGE_KEY);
-    if (adminSession) {
-      try { setIsAdmin(JSON.parse(adminSession)); } catch { localStorage.removeItem(ADMIN_STORAGE_KEY); }
-    }
-    if (storedUser) {
-      try { setUser(JSON.parse(storedUser)); } catch { localStorage.removeItem(STORAGE_KEY); }
+    const adminSession = typeof window !== 'undefined' ? localStorage.getItem(ADMIN_STORAGE_KEY) : null;
+    if (adminSession === 'true') {
+      setIsAdmin(true);
     }
     setIsInitializing(false);
   }, []);
 
-  const signIn = async (email: string, password: string): Promise<{ error: string | null }> => {
-    if (!email || !password) return { error: 'Email and password are required' };
-    const newUser: User = {
-      id: 'demo-user-' + Math.random().toString(36).substring(7),
+  const sendMagicLink = async (email: string): Promise<{ error: string | null }> => {
+    setUser({
+      ...MOCK_USER,
       email,
-      user_metadata: { full_name: email.split('@')[0] },
-    };
-    setUser(newUser);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newUser));
+    });
+    setSession(MOCK_SESSION);
     return { error: null };
   };
 
-  const signUp = async (email: string, password: string, name: string): Promise<{ error: string | null; needsConfirmation: boolean }> => {
-    if (!email || !password || !name) return { error: 'All fields are required', needsConfirmation: false };
-    if (password.length < 8) return { error: 'Password must be at least 8 characters', needsConfirmation: false };
-    const newUser: User = {
-      id: 'demo-user-' + Math.random().toString(36).substring(7),
+  const signIn = async (email: string): Promise<{ error: string | null }> => {
+    return sendMagicLink(email);
+  };
+
+  const signUp = async (email: string, _method?: string, name?: string): Promise<{ error: string | null; needsConfirmation?: boolean }> => {
+    setUser({
+      ...MOCK_USER,
       email,
-      user_metadata: { full_name: name },
-    };
-    setUser(newUser);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newUser));
+      user_metadata: { full_name: name || 'Demo User' },
+    });
+    setSession(MOCK_SESSION);
     return { error: null, needsConfirmation: false };
   };
 
+  const resetPassword = async (_email: string): Promise<{ error: string | null }> => {
+    return { error: null };
+  };
+
+  const updatePassword = async (_password: string): Promise<{ error: string | null }> => {
+    return { error: null };
+  };
+
   const signInWithGoogle = async () => {
-    const newUser: User = {
-      id: 'demo-google-user-' + Math.random().toString(36).substring(7),
-      email: 'demo@gmail.com',
-      user_metadata: { full_name: 'Demo User' },
-    };
-    setUser(newUser);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newUser));
+    setUser(MOCK_USER);
+    setSession(MOCK_SESSION);
   };
 
   const signInAsAdmin = async (email: string, password: string): Promise<{ error: string | null }> => {
-    if (email !== ADMIN_EMAIL || password !== ADMIN_PASSWORD) {
-      return { error: 'Invalid admin credentials' };
+    if (!email || !password) {
+      return { error: 'Please enter both admin email and password' };
     }
-    const adminUser: User = {
-      id: 'admin-user',
-      email: ADMIN_EMAIL,
-      user_metadata: { full_name: 'Admin' },
-    };
-    setUser(adminUser);
+    // Allow demo admin credentials (admin@astrix.ai / admin123) or any valid input in mock mode
     setIsAdmin(true);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(adminUser));
-    localStorage.setItem(ADMIN_STORAGE_KEY, 'true');
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(ADMIN_STORAGE_KEY, 'true');
+    }
     return { error: null };
   };
 
   const signOut = async () => {
-    setUser(null);
     setIsAdmin(false);
-    localStorage.removeItem(STORAGE_KEY);
-    localStorage.removeItem(ADMIN_STORAGE_KEY);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(ADMIN_STORAGE_KEY);
+    }
   };
-
-  const resetPassword = async (_email: string) => ({ error: null });
-  const updatePassword = async (_password: string) => ({ error: null });
 
   return (
     <AuthContext.Provider value={{
-      session: user ? { user } : null, user, isInitializing, isAdmin,
-      signOut, signIn, signUp, signInWithGoogle, signInAsAdmin,
-      resetPassword, updatePassword,
+      session, user, isInitializing, isAdmin,
+      signOut, sendMagicLink, signInWithGoogle, signInAsAdmin,
+      signIn, signUp, resetPassword, updatePassword,
     }}>
       {children}
     </AuthContext.Provider>

@@ -1,20 +1,21 @@
-import React from 'react';
-import { Navigate } from 'react-router-dom';
+'use client';
+
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { AdminLogin } from './AdminLogin';
 import { AdminDashboard } from './AdminDashboard';
-import { Loader2 } from 'lucide-react';
 
 export const AdminRoute: React.FC = () => {
-  const { isAdmin, isInitializing } = useAuth();
+  const { isAdmin } = useAuth();
+  const [mounted, setMounted] = useState(false);
 
-  if (isInitializing) {
-    return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-brand-blue animate-spin" />
-      </div>
-    );
-  }
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
 
   return isAdmin ? <AdminDashboard /> : <AdminLogin />;
 };
+
+export default AdminRoute;

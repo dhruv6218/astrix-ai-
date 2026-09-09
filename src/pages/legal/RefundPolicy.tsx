@@ -1,8 +1,10 @@
+'use client';
+
 import React from 'react';
 import { MainLayout } from '../../layouts/MainLayout';
 import { Receipt } from 'lucide-react';
 import { useScrollReveal } from '../../hooks/useScrollReveal';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 
 export const RefundPolicy = () => {
   const { ref: headerRef, isVisible: headerVisible } = useScrollReveal();
@@ -27,13 +29,13 @@ export const RefundPolicy = () => {
       <div className="max-w-[800px] mx-auto px-6 py-16 md:py-24">
         <div className="prose prose-lg prose-blue max-w-none text-gray-600 font-medium">
           <p className="lead text-xl text-gray-900 font-bold mb-8">
-            Astrix AI operates on an outcome-based pricing model. We believe in charging only when we deliver real, measurable value — when your invoices actually get paid.
+            Astrix AI operates on an outcome-based pricing model. We believe in charging only when we deliver real, measurable value � when your invoices actually get paid.
           </p>
 
           <div className="bg-green-50 border border-green-100 p-6 rounded-2xl my-8">
             <h3 className="font-heading text-lg font-bold text-gray-900 mb-2">Our Core Promise</h3>
             <p className="text-sm text-gray-700 m-0">
-              The <strong>Hook (Free) plan</strong> charges nothing unless we successfully recover your first 3 invoices. You only pay when Astrix delivers results. This is not a trial — it&apos;s our standard offering for new users.
+              The <strong>Hook (Free) plan</strong> charges nothing unless we successfully recover your first 3 invoices. You only pay when Astrix delivers results. This is not a trial � it&apos;s our standard offering for new users.
             </p>
           </div>
 
@@ -83,7 +85,7 @@ export const RefundPolicy = () => {
           <h2 className="font-heading text-2xl font-bold text-gray-900 mt-12 mb-4">7. Cancellations</h2>
           <p className="mb-8">
             You may cancel your subscription at any time from{' '}
-            <Link to="/app/settings" className="text-brand-blue font-bold hover:underline">Settings &rarr; Billing</Link>. Upon cancellation, your access continues until the end of the current paid period. We do not charge any cancellation fees.
+            <Link href="/app/settings" className="text-brand-blue font-bold hover:underline">Settings &rarr; Billing</Link>. Upon cancellation, your access continues until the end of the current paid period. We do not charge any cancellation fees.
           </p>
 
           <h2 className="font-heading text-2xl font-bold text-gray-900 mt-12 mb-4">8. Contact</h2>
@@ -96,3 +98,5 @@ export const RefundPolicy = () => {
     </MainLayout>
   );
 };
+
+export default RefundPolicy;

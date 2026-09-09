@@ -1,5 +1,7 @@
+﻿'use client';
+
 import React from 'react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 
 export const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -9,7 +11,7 @@ export const Footer = () => {
       <div className="max-w-[1400px] mx-auto px-6 md:px-12">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
           <div className="flex flex-col gap-4">
-            <Link to="/" className="font-heading text-xl font-black text-gray-900 tracking-tighter uppercase">
+            <Link href="/" className="font-heading text-xl font-black text-gray-900 tracking-tighter uppercase">
               Astrix<span className="text-brand-blue">.AI</span>
             </Link>
             <p className="text-sm text-gray-400 font-medium max-w-xs">
@@ -21,18 +23,18 @@ export const Footer = () => {
             <div className="flex flex-col gap-4">
               <h4 className="text-xs font-mono font-bold text-gray-900 uppercase tracking-widest">Product</h4>
               <nav className="flex flex-col gap-2">
-                <Link to="/pricing" className="text-sm text-gray-500 hover:text-brand-blue font-medium transition-colors">Pricing</Link>
-                <Link to="/login" className="text-sm text-gray-500 hover:text-brand-blue font-medium transition-colors">Login</Link>
-                <Link to="/signup" className="text-sm text-gray-500 hover:text-brand-blue font-medium transition-colors">Sign Up</Link>
+                <Link href="/pricing" className="text-sm text-gray-500 hover:text-brand-blue font-medium transition-colors">Pricing</Link>
+                <Link href="/login" className="text-sm text-gray-500 hover:text-brand-blue font-medium transition-colors">Login</Link>
+                <Link href="/signup" className="text-sm text-gray-500 hover:text-brand-blue font-medium transition-colors">Sign Up</Link>
               </nav>
             </div>
             
             <div className="flex flex-col gap-4">
               <h4 className="text-xs font-mono font-bold text-gray-900 uppercase tracking-widest">Company</h4>
               <nav className="flex flex-col gap-2">
-                <Link to="/contact" className="text-sm text-gray-500 hover:text-brand-blue font-medium transition-colors">Contact</Link>
-                <Link to="/privacy" className="text-sm text-gray-500 hover:text-brand-blue font-medium transition-colors">Privacy</Link>
-                <Link to="/terms" className="text-sm text-gray-500 hover:text-brand-blue font-medium transition-colors">Terms</Link>
+                <Link href="/contact" className="text-sm text-gray-500 hover:text-brand-blue font-medium transition-colors">Contact</Link>
+                <Link href="/privacy" className="text-sm text-gray-500 hover:text-brand-blue font-medium transition-colors">Privacy</Link>
+                <Link href="/terms" className="text-sm text-gray-500 hover:text-brand-blue font-medium transition-colors">Terms</Link>
               </nav>
             </div>
           </div>

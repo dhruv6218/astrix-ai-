@@ -106,3 +106,5 @@ export const PrivacyPolicy = () => {
     </MainLayout>
   );
 };
+
+export default PrivacyPolicy;

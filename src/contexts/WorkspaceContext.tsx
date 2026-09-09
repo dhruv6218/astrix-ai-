@@ -1,3 +1,5 @@
+'use client';
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { Workspace } from '../types';
@@ -20,36 +22,42 @@ const WorkspaceContext = createContext<WorkspaceContextType>({
 
 const STORAGE_KEY = 'astrix_demo_workspace';
 
+const DEFAULT_MOCK_WORKSPACE: Workspace = {
+  id: 'ws-demo-astrix',
+  name: 'Acme Corp Workspace',
+  slug: 'acme-corp',
+  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+  logo_url: null,
+  plan: 'Hook',
+  created_at: new Date().toISOString(),
+};
+
 export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
-  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-  const [activeWorkspace, setActiveWs] = useState<Workspace | null>(null);
-  const [isWorkspaceInitializing, setIsWorkspaceInitializing] = useState(true);
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([DEFAULT_MOCK_WORKSPACE]);
+  const [activeWorkspace, setActiveWs] = useState<Workspace | null>(DEFAULT_MOCK_WORKSPACE);
+  const [isWorkspaceInitializing, setIsWorkspaceInitializing] = useState(false);
 
   const fetchWorkspaces = async () => {
     setIsWorkspaceInitializing(true);
-    if (!user) { setWorkspaces([]); setActiveWs(null); setIsWorkspaceInitializing(false); return; }
-
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       try {
         const ws = JSON.parse(stored) as Workspace;
-        setWorkspaces([ws]); setActiveWs(ws);
+        setWorkspaces([ws]);
+        setActiveWs(ws);
         initializeWorkspace(ws.id);
-      } catch { localStorage.removeItem(STORAGE_KEY); }
+      } catch {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_MOCK_WORKSPACE));
+        setWorkspaces([DEFAULT_MOCK_WORKSPACE]);
+        setActiveWs(DEFAULT_MOCK_WORKSPACE);
+        initializeWorkspace(DEFAULT_MOCK_WORKSPACE.id);
+      }
     } else {
-      const defaultWs: Workspace = {
-        id: 'ws-' + Math.random().toString(36).substring(7),
-        name: user.user_metadata?.full_name ? `${user.user_metadata.full_name.split(' ')[0]}'s Workspace` : 'My Workspace',
-        slug: 'my-workspace',
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
-        logo_url: null,
-        plan: 'Hook',
-        created_at: new Date().toISOString(),
-      };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultWs));
-      setWorkspaces([defaultWs]); setActiveWs(defaultWs);
-      initializeWorkspace(defaultWs.id);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_MOCK_WORKSPACE));
+      setWorkspaces([DEFAULT_MOCK_WORKSPACE]);
+      setActiveWs(DEFAULT_MOCK_WORKSPACE);
+      initializeWorkspace(DEFAULT_MOCK_WORKSPACE.id);
     }
     setIsWorkspaceInitializing(false);
   };
@@ -66,7 +74,9 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setWorkspaces([updated]);
   };
 
-  useEffect(() => { fetchWorkspaces(); }, [user]);
+  useEffect(() => {
+    fetchWorkspaces();
+  }, [user]);
 
   return (
     <WorkspaceContext.Provider value={{

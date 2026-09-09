@@ -20,7 +20,7 @@ export const CsvUploadModal = () => {
 
   // Manual form state
   const [form, setForm] = useState({
-    client_name: '', client_email: '', amount: '', currency: 'USD', due_date: '',
+    client_name: '', client_email: '', amount: '', currency: 'USD', due_date: '', payment_link: ''
   });
   const [isSaving, setIsSaving] = useState(false);
 
@@ -168,6 +168,11 @@ export const CsvUploadModal = () => {
                     <label className="block text-sm font-bold text-gray-900 mb-1">Due Date <span className="text-red-500">*</span></label>
                     <input type="date" required value={form.due_date} onChange={e => setForm(p => ({ ...p, due_date: e.target.value }))}
                       className="w-full bg-gray-50 border border-gray-200 text-sm rounded-xl p-3 outline-none focus:ring-2 focus:ring-brand-blue" />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-sm font-bold text-gray-900 mb-1">Manual Payment Link <span className="text-gray-400 font-normal text-xs">(Optional)</span></label>
+                    <input type="url" value={form.payment_link} onChange={e => setForm(p => ({ ...p, payment_link: e.target.value }))}
+                      placeholder="e.g. https://paypal.me/yourbusiness/2400" className="w-full bg-gray-50 border border-gray-200 text-sm rounded-xl p-3 outline-none focus:ring-2 focus:ring-brand-blue" />
                   </div>
                 </div>
                 <button type="submit" disabled={isSaving}

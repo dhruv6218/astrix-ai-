@@ -1,9 +1,11 @@
+'use client';
+
 import React, { useState, useRef, useEffect } from 'react';
 import { AppLayout } from '../../layouts/AppLayout';
-import { Send, Sparkles, User, Loader2, ArrowRight, Bot } from 'lucide-react';
+import { Send, Sparkles, User, Loader2, Bot } from 'lucide-react';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
-import { Link } from 'react-router-dom';
-
+import { api } from '../../lib/api';
+import type { Opportunity, Account, Decision, Invoice } from '../../types';
 
 interface Message {
   id: string;
@@ -23,7 +25,7 @@ export const Assistant = () => {
       role: 'assistant',
       content: (
         <div className="space-y-2">
-          <p>Hello! I'm your Astrix Assistant. I can help you query your workspace data.</p>
+          <p>Hello! I&apos;m your Astrix Assistant. I can help you query your workspace data.</p>
           <p className="text-sm text-gray-500">Try asking me about opportunities, affected accounts, or recent decisions.</p>
         </div>
       )
@@ -61,15 +63,15 @@ export const Assistant = () => {
     } else {
       await new Promise(r => setTimeout(r, 1000));
       const lower = text.toLowerCase();
-      let responseContent: React.ReactNode = 'No matching results found in workspace data.';
+      let innerContent: React.ReactNode = 'No matching results found in workspace data.';
 
       if (lower.includes('opportunit')) {
-        const opps = await api.opportunities.list(activeWorkspace.id);
+        const opps: Opportunity[] = await api.opportunities.list(activeWorkspace.id);
         if (opps.length > 0) {
-          responseContent = (
+          innerContent = (
             <div className="space-y-2">
               <p className="font-bold text-gray-900 mb-2">Top {Math.min(3, opps.length)} Opportunities:</p>
-              {opps.slice(0, 3).map((opp, idx) => (
+              {opps.slice(0, 3).map((opp: Opportunity, idx: number) => (
                 <div key={idx} className="p-3 bg-white border border-gray-200 rounded-xl">
                   <div className="text-xs text-gray-700">
                     <span className="font-bold text-gray-900">{opp.problems?.title}:</span> Score {opp.opportunity_score}, Recommended: {opp.recommended_action}
@@ -80,12 +82,12 @@ export const Assistant = () => {
           );
         }
       } else if (lower.includes('account')) {
-        const accounts = await api.accounts.list(activeWorkspace.id);
+        const accounts: Account[] = await api.accounts.list(activeWorkspace.id);
         if (accounts.length > 0) {
-          responseContent = (
+          innerContent = (
             <div className="space-y-2">
               <p className="font-bold text-gray-900 mb-2">Accounts ({accounts.length}):</p>
-              {accounts.slice(0, 5).map((acc, idx) => (
+              {accounts.slice(0, 5).map((acc: Account, idx: number) => (
                 <div key={idx} className="p-3 bg-white border border-gray-200 rounded-xl">
                   <div className="text-xs text-gray-700">
                     <span className="font-bold text-gray-900">{acc.name}:</span> ARR ${acc.arr.toLocaleString()}, Plan: {acc.plan || 'Standard'}
@@ -96,12 +98,12 @@ export const Assistant = () => {
           );
         }
       } else if (lower.includes('decision')) {
-        const decisions = await api.decisions.list(activeWorkspace.id);
+        const decisions: Decision[] = await api.decisions.list(activeWorkspace.id);
         if (decisions.length > 0) {
-          responseContent = (
+          innerContent = (
             <div className="space-y-2">
               <p className="font-bold text-gray-900 mb-2">Recent Decisions:</p>
-              {decisions.slice(0, 3).map((dec, idx) => (
+              {decisions.slice(0, 3).map((dec: Decision, idx: number) => (
                 <div key={idx} className="p-3 bg-white border border-gray-200 rounded-xl">
                   <div className="text-xs text-gray-700">
                     <span className="font-bold text-gray-900">{dec.title}:</span> Action: {dec.action}
@@ -112,10 +114,12 @@ export const Assistant = () => {
           );
         }
       } else {
-        const invoices = await api.invoices.list(activeWorkspace.id);
-        const pending = invoices.filter(i => i.status === 'pending');
-        responseContent = `You have ${pending.length} pending invoices totaling ${pending.reduce((s, i) => s + i.amount, 0).toLocaleString()}.`;
+        const invoices: Invoice[] = await api.invoices.list(activeWorkspace.id);
+        const pending = invoices.filter((i: Invoice) => i.status === 'pending');
+        innerContent = `You have ${pending.length} pending invoices totaling $${pending.reduce((s: number, i: Invoice) => s + i.amount, 0).toLocaleString()}.`;
       }
+
+      responseContent = innerContent;
     }
 
     const assistantMsg: Message = { id: Date.now().toString(), role: 'assistant', content: responseContent };
@@ -203,3 +207,5 @@ export const Assistant = () => {
     </AppLayout>
   );
 };
+
+export default Assistant;

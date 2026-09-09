@@ -1,26 +1,14 @@
-// Frontend-only: Supabase disabled — all data lives in localStorage
-export const supabase = {
-  auth: {
-    getSession: async () => ({ data: { session: null }, error: null }),
-    onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
-    signInWithPassword: async () => ({ error: { message: 'Backend disabled' } }),
-    signUp: async () => ({ data: { session: null }, error: null }),
-    signInWithOAuth: async () => {},
-    signOut: async () => {},
-    resetPasswordForEmail: async () => ({ error: null }),
-    updateUser: async () => ({ error: null }),
-  },
-  from: () => ({
-    select: () => ({
-      eq: () => ({
-        single: async () => ({ data: null, error: null }),
-        maybeSingle: async () => ({ data: null, error: null }),
-      }),
-    }),
-    insert: async () => ({ data: null, error: null }),
-    update: () => ({ eq: async () => ({ error: null }) }),
-    delete: async () => ({ error: null }),
-  }),
-  rpc: async () => ({ data: null, error: { message: 'Backend disabled' } }),
-  functions: { invoke: async () => ({ data: null, error: { message: 'Backend disabled' } }) },
-};
+import { createBrowserClient } from '@supabase/ssr';
+
+const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+const rawKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
+
+const SUPABASE_URL = (rawUrl.startsWith('http://') || rawUrl.startsWith('https://'))
+  ? rawUrl
+  : 'https://placeholder.supabase.co';
+
+const SUPABASE_ANON_KEY = rawKey || 'placeholder-anon-key';
+
+export function createClient() {
+  return createBrowserClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+}

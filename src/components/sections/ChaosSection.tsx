@@ -61,7 +61,7 @@ export const ChaosSection = () => {
           {problems.map((prob, i) => (
             <div 
               key={i} 
-              ref={el => cardsRef.current[i] = el}
+              ref={(el: HTMLDivElement | null) => { cardsRef.current[i] = el; }}
               className="transition-all duration-500 ease-out opacity-30 transform translate-y-12 scale-95 blur-sm bg-white p-8 md:p-10 rounded-3xl shadow-xl shadow-gray-200/50 border border-gray-100"
             >
               <div className="text-5xl md:text-6xl font-heading font-black text-gray-100 mb-4">{prob.num}</div>

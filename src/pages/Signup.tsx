@@ -1,29 +1,31 @@
-import React, { useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+'use client';
+
+import React, { useState, Suspense } from 'react';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { AuthLayout } from '../layouts/AuthLayout';
 import { Loader2, AlertCircle, Sparkles } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
-export const Signup = () => {
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const isDemo = searchParams.get('demo') === 'true';
+function SignupForm() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const isDemo = searchParams?.get('demo') === 'true';
   const { signUp, signInWithGoogle } = useAuth();
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
-  
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
 
   const handleGoogleSignup = async () => {
     setIsLoading(true);
     setError(null);
     await signInWithGoogle();
     setIsLoading(false);
-    navigate('/onboarding/step-1');
+    router.push('/onboarding/step-1');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -31,7 +33,7 @@ export const Signup = () => {
     setIsLoading(true);
     setError(null);
 
-    const { error: signUpError, needsConfirmation } = await signUp(email, password, name);
+    const { error: signUpError, needsConfirmation } = await signUp(email, 'magiclink', name);
 
     setIsLoading(false);
 
@@ -43,14 +45,14 @@ export const Signup = () => {
     if (needsConfirmation) {
       setSuccessMsg("Account created! Please check your email to verify your account before logging in.");
     } else {
-      navigate('/onboarding/step-1');
+      router.push('/onboarding/step-1');
     }
   };
 
   return (
     <AuthLayout>
       <div className="bg-white p-8 md:p-10 rounded-3xl shadow-apple border border-gray-200 w-full animate-[fadeIn_0.5s_ease-out]">
-        
+
         {isDemo && !error && !successMsg && (
           <div className="mb-8 p-4 bg-blue-50 border border-brand-blue/20 rounded-xl flex items-start gap-3 text-sm text-brand-blue font-medium animate-[fadeIn_0.3s_ease-out]">
             <Sparkles className="w-5 h-5 shrink-0 mt-0.5" />
@@ -66,7 +68,7 @@ export const Signup = () => {
           <p className="text-gray-500 text-sm font-medium">First 3 recoveries are free. No credit card required.</p>
         </div>
 
-        <button 
+        <button
           onClick={handleGoogleSignup}
           disabled={isLoading}
           type="button"
@@ -102,53 +104,40 @@ export const Signup = () => {
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div>
               <label className="block text-sm font-bold text-gray-900 mb-1.5" htmlFor="name">Full Name</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full bg-gray-50/50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:bg-white focus:ring-4 focus:ring-brand-blue/20 focus:border-brand-blue block p-3.5 transition-all duration-300 outline-none placeholder-gray-400" 
-                placeholder="Jane Doe" 
-                required 
+                className="w-full bg-gray-50/50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:bg-white focus:ring-4 focus:ring-brand-blue/20 focus:border-brand-blue block p-3.5 transition-all duration-300 outline-none placeholder-gray-400"
+                placeholder="Jane Doe"
+                required
               />
             </div>
             <div>
               <label className="block text-sm font-bold text-gray-900 mb-1.5" htmlFor="email">Email Address</label>
-              <input 
-                type="email" 
+              <input
+                type="email"
                 id="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-gray-50/50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:bg-white focus:ring-4 focus:ring-brand-blue/20 focus:border-brand-blue block p-3.5 transition-all duration-300 outline-none placeholder-gray-400" 
-                placeholder="jane@company.com" 
-                required 
+                className="w-full bg-gray-50/50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:bg-white focus:ring-4 focus:ring-brand-blue/20 focus:border-brand-blue block p-3.5 transition-all duration-300 outline-none placeholder-gray-400"
+                placeholder="jane@company.com"
+                required
               />
             </div>
-            <div>
-              <label className="block text-sm font-bold text-gray-900 mb-1.5" htmlFor="password">Password</label>
-              <input 
-                type="password" 
-                id="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-gray-50/50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:bg-white focus:ring-4 focus:ring-brand-blue/20 focus:border-brand-blue block p-3.5 transition-all duration-300 outline-none placeholder-gray-400" 
-                placeholder="••••••••" 
-                required 
-                minLength={8}
-              />
-            </div>
-            
+
             <div className="flex items-start pt-2">
               <div className="flex items-center h-5">
                 <input id="terms" type="checkbox" className="w-4 h-4 border border-gray-300 rounded bg-gray-50 focus:ring-2 focus:ring-brand-blue accent-brand-blue cursor-pointer transition-all" required />
               </div>
               <label htmlFor="terms" className="ml-2 text-xs font-medium text-gray-500">
-                I agree to the <Link to="/terms" className="text-brand-blue hover:underline font-bold">Terms</Link> and <Link to="/privacy" className="text-brand-blue hover:underline font-bold">Privacy Policy</Link>.
+                I agree to the <Link href="/terms" className="text-brand-blue hover:underline font-bold">Terms</Link> and <Link href="/privacy" className="text-brand-blue hover:underline font-bold">Privacy Policy</Link>.
               </label>
             </div>
 
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               disabled={isLoading}
               className="w-full flex items-center justify-center text-white bg-brand-blue hover:bg-blue-700 disabled:bg-brand-blue/70 disabled:cursor-not-allowed focus-visible:ring-4 focus-visible:ring-brand-blue focus-visible:ring-offset-2 font-bold rounded-xl text-sm px-5 py-4 transition-all shadow-glow-blue btn-shine outline-none mt-4 h-[52px]"
             >
@@ -158,10 +147,9 @@ export const Signup = () => {
         )}
 
         <p className="text-sm text-gray-500 font-medium text-center mt-6">
-          Already have an account? <Link to="/login" className="text-brand-blue font-bold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue rounded-sm">Sign in →</Link>
+          Already have an account? <Link href="/login" className="text-brand-blue font-bold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue rounded-sm">Sign in →</Link>
         </p>
 
-        {/* Trust Signal */}
         <div className="mt-8 pt-6 border-t border-gray-100 flex justify-center items-center gap-2 text-[10px] text-gray-400 font-mono font-bold uppercase tracking-wider">
           <span>Privacy-first</span>
           <span>•</span>
@@ -171,3 +159,17 @@ export const Signup = () => {
     </AuthLayout>
   );
 };
+
+export const Signup = () => (
+  <Suspense fallback={
+    <AuthLayout>
+      <div className="bg-white p-12 rounded-3xl shadow-apple border border-gray-200 w-full flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-brand-blue" />
+      </div>
+    </AuthLayout>
+  }>
+    <SignupForm />
+  </Suspense>
+);
+
+export default Signup;

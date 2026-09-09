@@ -1,7 +1,9 @@
+'use client';
+
 import React from 'react';
 import { AppLayout } from '../../layouts/AppLayout';
 import { BarChart3, TrendingUp, DollarSign, Clock } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 
 export const Analytics = () => {
   return (
@@ -27,10 +29,12 @@ export const Analytics = () => {
             </div>
           ))}
         </div>
-        <Link to="/pricing" className="bg-brand-blue text-white px-8 py-3.5 rounded-xl font-bold hover:bg-blue-700 transition-colors inline-block shadow-sm">
+        <Link href="/pricing" className="bg-brand-blue text-white px-8 py-3.5 rounded-xl font-bold hover:bg-blue-700 transition-colors inline-block shadow-sm">
           Upgrade to Unlock Analytics
         </Link>
       </div>
     </AppLayout>
   );
 };
+
+export default Analytics;

@@ -1,23 +1,20 @@
+'use client';
+
 import React, { useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
 import { HeroSection } from '../components/sections/HeroSection';
 import { ChaosSection } from '../components/sections/ChaosSection';
 import { ClaritySection } from '../components/sections/ClaritySection';
 import { VolumeValueSection } from '../components/sections/VolumeValueSection';
-import { SignalExplorerSection } from '../components/sections/SignalExplorerSection';
-import { EvidenceViewSection } from '../components/sections/EvidenceViewSection';
-import { EngineSection } from '../components/sections/EngineSection';
-import { DecisionLabSection } from '../components/sections/DecisionLabSection';
-import { ArtifactSection } from '../components/sections/ArtifactSection';
-import { PostLaunchSection } from '../components/sections/PostLaunchSection';
+import { ToneCloningSection } from '../components/sections/ToneCloningSection';
+import { OneClickCheckoutSection } from '../components/sections/OneClickCheckoutSection';
+import { SmartDeclineSection } from '../components/sections/SmartDeclineSection';
 import { MainLayout } from '../layouts/MainLayout';
 
 export const Home = () => {
-  const location = useLocation();
-
   useEffect(() => {
-    if (location.hash) {
-      const id = location.hash.replace('#', '');
+    if (typeof window === 'undefined') return;
+    if (window.location.hash) {
+      const id = window.location.hash.replace('#', '');
       const element = document.getElementById(id);
       if (element) {
         setTimeout(() => {
@@ -27,7 +24,7 @@ export const Home = () => {
     } else {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-  }, [location]);
+  }, []);
 
   return (
     <MainLayout>
@@ -43,15 +40,14 @@ export const Home = () => {
       {/* 4. Why different: AI tone & Smart recovery */}
       <VolumeValueSection />
       
-      {/* 5. Product Preview: The Core Loop in Action */}
-      <SignalExplorerSection />
-      <EvidenceViewSection />
-      <EngineSection />
-      <DecisionLabSection />
-      <ArtifactSection />
-      <PostLaunchSection />
+      {/* 5. Product Features */}
+      <ToneCloningSection />
+      <OneClickCheckoutSection />
+      <SmartDeclineSection />
       
       {/* Final CTA is handled by EmpireSection inside MainLayout */}
     </MainLayout>
   );
 };
+
+export default Home;
